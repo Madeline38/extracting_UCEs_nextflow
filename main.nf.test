@@ -1,0 +1,43 @@
+#!/usr/bin/env nextflow
+
+//========//
+// modules
+//========//
+
+include { FASTQC_RUN ; MULTIQC_RUN } from './modules/fastqcBefore.nf'
+
+//=========//
+// workflow
+//=========//
+
+workflow {
+    
+    main:
+
+    if( !params.reads )
+        error "Missing obligatory parameter : try again with --reads <directory_with_fastq>"
+
+    // create a channel for inputs from fastq.gz file
+    reads_ch = channel.fromFilePairs(
+        "${params.reads}/*-READ{1,2}.f*q.gz",
+        checkIfExists: true //check if there is pairs to avoid running empty channel
+        )
+        .view()
+
+    // do check data quality with fastqc
+    FASTQC_RUN(reads_ch)
+    MULTIQC_RUN(FASTQC_RUN.out.report.collect())
+
+    publish:
+    fastqc_before                 = FASTQC_RUN.out.report
+    multiqc_before                = MULTIQC_RUN.out.report
+}
+
+//=========//
+// output
+//=========//
+
+output {
+    fastqc_before  {path 'Etape1/fastqc'}
+    multiqc_before {path 'Etape1/multiqc'}
+}
