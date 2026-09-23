@@ -5,6 +5,7 @@
 //========//
 
 include { FASTQC_RUN ; MULTIQC_RUN } from './modules/fastqcBefore.nf'
+include { CONTAMINATION ; REMOVE ; CHECK } from './modules/removeContamination.nf'
 
 //=========//
 // workflow
@@ -15,7 +16,7 @@ workflow {
     main:
 
     if( !params.reads )
-        error "Missing obligatory parameter : try again with --reads <directory_with_fastq>"
+        error "Missing obligatory parameter : try again with --reads <directory_with_fastq.gz>"
 
     // create a channel for inputs from fastq.gz file
     reads_ch = channel.fromFilePairs(
@@ -28,9 +29,19 @@ workflow {
     FASTQC_RUN(reads_ch)
     MULTIQC_RUN(FASTQC_RUN.out.report.collect())
 
+    // decontaminate the reads from human contamination
+    CONTAMINATION(reads_ch)
+    REMOVE(reads_ch.join(CONTAMINATION.out.results))
+    CHECK (REMOVE.out.clean_reads)
+
     publish:
     fastqc_before                 = FASTQC_RUN.out.report
     multiqc_before                = MULTIQC_RUN.out.report
+    report_contamination_before   = CONTAMINATION.out.results.map { sample, report, output -> tuple(sample, report) }
+    reads_c_or_u_before           = CONTAMINATION.out.results.map { sample, report, output -> tuple(sample, output) }
+    clean_reads                   = REMOVE.out.clean_reads
+    report_contamination_after    = CHECK.out.report
+    reads_c_or_u_after            = CHECK.out.output
 }
 
 //=========//
@@ -38,6 +49,12 @@ workflow {
 //=========//
 
 output {
-    fastqc_before  {path 'Etape1/fastqc'}
-    multiqc_before {path 'Etape1/multiqc'}
+    fastqc_before                {path 'Etape1_analyses/fastqc'}
+    multiqc_before               {path 'Etape1_analyses/multiqc'}
+    report_contamination_before  {path 'Etape2_decontamination/contamination_before'}
+    reads_c_or_u_before          {path 'Etape2_decontamination/contamination_before'}
+    clean_reads                  {path 'Etape2_decontamination/new_reads/clean_reads'}
+    report_contamination_after   {path 'Etape2_decontamination/contamination_after'}
+    reads_c_or_u_after           {path 'Etape2_decontamination/contamination_after'}
+
 }
