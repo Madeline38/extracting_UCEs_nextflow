@@ -5,7 +5,10 @@
 //========//
 
 include { FASTQC_RUN ; MULTIQC_RUN } from './modules/fastqcBefore.nf'
-include { CONTAMINATION ; REMOVE ; CHECK } from './modules/removeContamination.nf'
+include { CONTAMINATION ; REMOVE ; CHECK ; CONTAM_SUMMARY} from './modules/removeContamination.nf'
+include { FASTQC_RUN_AFTER ; MULTIQC_RUN_AFTER } from './modules/fastqcAfter.nf'
+include { SPADES_ASSEMBLY ; MEGAHIT_ASSEMBLY } from './modules/assembly.nf'
+
 
 //=========//
 // workflow
@@ -14,6 +17,8 @@ include { CONTAMINATION ; REMOVE ; CHECK } from './modules/removeContamination.n
 workflow {
     
     main:
+
+if (params.skip_assembly == 'false') {
 
     if( !params.reads )
         error "Missing obligatory parameter : try again with --reads <directory_with_fastq.gz>"
@@ -33,15 +38,64 @@ workflow {
     CONTAMINATION(reads_ch)
     REMOVE(reads_ch.join(CONTAMINATION.out.results))
     CHECK (REMOVE.out.clean_reads)
+    CONTAM_SUMMARY(
+        CONTAMINATION.out.stats.collect(),
+        REMOVE.out.stats.collect(),
+        CHECK.out.stats.collect()
+    )
+
+    // do check data quality with fastqc again
+    FASTQC_RUN_AFTER(REMOVE.out.clean_reads)
+    MULTIQC_RUN_AFTER(FASTQC_RUN_AFTER.out.report.collect())
+
+    
+    // do assembly
+
+    def valid_assembly = ['spades', 'megahit']
+    if ( !valid_assembly.contains(params.type_assembly) ) {
+        error "Unrecognised type_assembly: '${params.type_assembly}'. Options: ${valid_assembly.join(', ')}"
+    }
+    
+    if (params.type_assembly == 'spades') {
+        SPADES_ASSEMBLY(REMOVE.out.clean_reads)
+        contigs_ch = SPADES_ASSEMBLY.out.contigs
+        logs_ch = SPADES_ASSEMBLY.out.logs
+        }
+          
+    else {
+        MEGAHIT_ASSEMBLY(REMOVE.out.clean_reads)
+        contigs_ch = MEGAHIT_ASSEMBLY.out.contigs
+        logs_ch = MEGAHIT_ASSEMBLY.out.logs
+          }
+  }
+
+else  {
+    contigs_ch = channel
+        .fromPath("${params.contigs}/*.contigs.fasta")
+        .collect()
+    assembly_conf_ch = channel.empty()
+}
+
+
 
     publish:
     fastqc_before                 = FASTQC_RUN.out.report
     multiqc_before                = MULTIQC_RUN.out.report
     report_contamination_before   = CONTAMINATION.out.results.map { sample, report, output -> tuple(sample, report) }
     reads_c_or_u_before           = CONTAMINATION.out.results.map { sample, report, output -> tuple(sample, output) }
+    info_contamination            = CONTAMINATION.out.stats
     clean_reads                   = REMOVE.out.clean_reads
+    info_decontamination          = REMOVE.out.stats
     report_contamination_after    = CHECK.out.report
     reads_c_or_u_after            = CHECK.out.output
+    info_contamination_after      = CHECK.out.stats
+    summary_decontamination       = CONTAM_SUMMARY.out.table
+    summary_decontamination_full  = CONTAM_SUMMARY.out.report
+    summary_decontamination_html  = CONTAM_SUMMARY.out.report_html
+    fastqc_after                  = FASTQC_RUN_AFTER.out.report
+    multiqc_after                 = MULTIQC_RUN_AFTER.out.report
+    assembly_contigs              = contigs_ch
+    assembly_logs                 = logs_ch
 }
 
 //=========//
@@ -53,8 +107,17 @@ output {
     multiqc_before               {path 'Etape1_analyses/multiqc'}
     report_contamination_before  {path 'Etape2_decontamination/contamination_before'}
     reads_c_or_u_before          {path 'Etape2_decontamination/contamination_before'}
+    info_contamination           {path 'Etape2_decontamination/contamination_before/stats'}
     clean_reads                  {path 'Etape2_decontamination/new_reads/clean_reads'}
+    info_decontamination         {path 'Etape2_decontamination/new_reads/stats'}
     report_contamination_after   {path 'Etape2_decontamination/contamination_after'}
     reads_c_or_u_after           {path 'Etape2_decontamination/contamination_after'}
-
+    info_contamination_after     {path 'Etape2_decontamination/contamination_after/stats'}
+    summary_decontamination      {path 'Etape2_decontamination'}
+    summary_decontamination_full {path 'Etape2_decontamination'}
+    summary_decontamination_html {path 'Etape2_decontamination'}
+    fastqc_after                 {path 'Etape3_analyses_post_decontamination/fastqc'}
+    multiqc_after                {path 'Etape3_analyses_post_decontamination/multiqc'}
+    assembly_contigs             {path 'Etape4_assemblage/contigs'}
+    assembly_logs                {path 'Etape4_assemblage/logs'}
 }

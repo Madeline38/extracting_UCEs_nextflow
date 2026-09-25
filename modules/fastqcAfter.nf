@@ -9,7 +9,7 @@
 //===========================================================================================================
 
 
-process FASTQC_RUN {
+process FASTQC_RUN_AFTER {
 
     tag "${sample}"
 
@@ -32,7 +32,7 @@ process FASTQC_RUN {
     """
 }
 
-process MULTIQC_RUN {
+process MULTIQC_RUN_AFTER {
 
     input:
     path reports
