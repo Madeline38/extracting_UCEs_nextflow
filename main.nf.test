@@ -8,6 +8,7 @@ include { FASTQC_RUN ; MULTIQC_RUN } from './modules/fastqcBefore.nf'
 include { CONTAMINATION ; REMOVE ; CHECK ; CONTAM_SUMMARY} from './modules/removeContamination.nf'
 include { FASTQC_RUN_AFTER ; MULTIQC_RUN_AFTER } from './modules/fastqcAfter.nf'
 include { SPADES_ASSEMBLY ; MEGAHIT_ASSEMBLY } from './modules/assembly.nf'
+include { QUAST ; BUSCO_DOWNLOAD ; BUSCO } from './modules/qualityAssembly.nf'
 
 
 //=========//
@@ -55,7 +56,7 @@ if (params.skip_assembly == 'false') {
     if ( !valid_assembly.contains(params.type_assembly) ) {
         error "Unrecognised type_assembly: '${params.type_assembly}'. Options: ${valid_assembly.join(', ')}"
     }
-    
+
     if (params.type_assembly == 'spades') {
         SPADES_ASSEMBLY(REMOVE.out.clean_reads)
         contigs_ch = SPADES_ASSEMBLY.out.contigs
@@ -72,11 +73,13 @@ if (params.skip_assembly == 'false') {
 else  {
     contigs_ch = channel
         .fromPath("${params.contigs}/*.contigs.fasta")
-        .collect()
+        .map { file -> tuple(file.simpleName, file) }
     assembly_conf_ch = channel.empty()
 }
 
-
+    QUAST(contigs_ch)
+    BUSCO_DOWNLOAD()
+    BUSCO(contigs_ch, BUSCO_DOWNLOAD.out.db.first())
 
     publish:
     fastqc_before                 = FASTQC_RUN.out.report
@@ -96,6 +99,18 @@ else  {
     multiqc_after                 = MULTIQC_RUN_AFTER.out.report
     assembly_contigs              = contigs_ch
     assembly_logs                 = logs_ch
+    quast_report_txt              = QUAST.out.report_txt
+    quast_report_tsv              = QUAST.out.report_tsv
+    quast_report_html             = QUAST.out.report_html
+    quast_basic_stats             = QUAST.out.basic_stats
+    quast_icarus_viewers          = QUAST.out.icarus_viewers
+    busco_logs                    = BUSCO.out.logs
+    busco_summary_txt             = BUSCO.out.summary_txt
+    busco_full_table              = BUSCO.out.full_table_tsv
+    busco_plot                    = BUSCO.out.plot
+
+
+
 }
 
 //=========//
@@ -120,4 +135,13 @@ output {
     multiqc_after                {path 'Etape3_analyses_post_decontamination/multiqc'}
     assembly_contigs             {path 'Etape4_assemblage/contigs'}
     assembly_logs                {path 'Etape4_assemblage/logs'}
+    quast_report_txt             {path 'Etape5_analyses_assemblage/QUAST'}
+    quast_report_tsv             {path 'Etape5_analyses_assemblage/QUAST'}
+    quast_report_html            {path 'Etape5_analyses_assemblage/QUAST'}
+    quast_basic_stats            {path 'Etape5_analyses_assemblage/QUAST'}
+    quast_icarus_viewers         {path 'Etape5_analyses_assemblage/QUAST'}
+    busco_logs                   {path 'Etape5_analyses_assemblage/BUSCO'}
+    busco_summary_txt            {path 'Etape5_analyses_assemblage/BUSCO'}
+    busco_full_table             {path 'Etape5_analyses_assemblage/BUSCO'}
+    busco_plot                   {path 'Etape5_analyses_assemblage/BUSCO'}
 }
