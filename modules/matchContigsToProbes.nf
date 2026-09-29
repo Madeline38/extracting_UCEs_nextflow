@@ -2,28 +2,31 @@
 // process pour match contigs to probes
 //=======================================//
 
-process matchContigsToProbes {
+// the objective here is to realise an alignment with lastz tool between contigs obtained and probes
+
+
+//===========================================================================================================
+
+process ALIGNMENT_LASTZ {
 
     input:
-    path contigs, stageAs: 'contigs/*' //met directement les contigs.fasta dans contigs/
+    tuple val(sample), path (contigs)
     path probes
 
     output:
-    path "uce-search-results", emit: uce_results
-    path "uce-search-results/probe.matches.sqlite", emit: sqlite
+    tuple val(sample), path ("${sample}_fasta_vs_probes.sam"), emit: lastz_results
 
     script:
     
     """
-    mkdir -p probes
-    sed '/^>/! s/[RYSWKMBDHVryswkmbdhv]/N/g' ${probes} > probes/probes_hymeno_assembled_clean.fasta
-
-    phyluce_assembly_match_contigs_to_probes \\
-        --contigs contigs \\
-        --probes probes/probes_hymeno_assembled_clean.fasta \\
-        --output uce-search-results \\
-        --regex "^(loci_\\d+)"
+    module load bioinfo/LASTZ/1.04.22
+    
+    lastz ${probes}[multiple,unmask] \\
+                "${contigs}"[unmask] \\
+                --gapped \\
+                --format=softsam \\
+                --ambiguous=iupac \\
+                --output="${sample}_fasta_vs_probes.sam"
     """
 
 }
-

@@ -9,6 +9,8 @@ include { CONTAMINATION ; REMOVE ; CHECK ; CONTAM_SUMMARY} from './modules/remov
 include { FASTQC_RUN_AFTER ; MULTIQC_RUN_AFTER } from './modules/fastqcAfter.nf'
 include { SPADES_ASSEMBLY ; MEGAHIT_ASSEMBLY } from './modules/assembly.nf'
 include { QUAST ; BUSCO_DOWNLOAD ; BUSCO } from './modules/qualityAssembly.nf'
+include { ALIGNMENT_LASTZ } from './modules/matchContigsToProbes.nf'
+include { REMOVE_PARALOGS ; SUMMARY_REMOVE_PARALOGS } from './modules/removeParalogs.nf'
 
 
 //=========//
@@ -18,6 +20,13 @@ include { QUAST ; BUSCO_DOWNLOAD ; BUSCO } from './modules/qualityAssembly.nf'
 workflow {
     
     main:
+
+if ( !params.probes )
+    error "Missing obligatory parameter : try again with --probes <name_probes.fasta>"
+if ( !(params.probes ==~ /.*\.(fasta|fa)$/) )
+    error "Your probe file is not a fasta file, please use the format <name_probes_file.fasta>"
+probes_file = file(params.probes, checkIfExists: true)
+
 
 if (params.skip_assembly == 'false') {
 
@@ -77,9 +86,20 @@ else  {
     assembly_conf_ch = channel.empty()
 }
 
+    // do analysis of the assembly
     QUAST(contigs_ch)
     BUSCO_DOWNLOAD()
     BUSCO(contigs_ch, BUSCO_DOWNLOAD.out.db.first())
+
+
+    // do alignment contigs with probes
+    ALIGNMENT_LASTZ (contigs_ch, probes_file)
+
+    // do UCEs extraction
+    REMOVE_PARALOGS(ALIGNMENT_LASTZ.out.lastz_results)
+    SUMMARY_REMOVE_PARALOGS(REMOVE_PARALOGS.out.stats.map { sample, path -> path }.collect())
+
+
 
     publish:
     fastqc_before                 = FASTQC_RUN.out.report
@@ -108,10 +128,19 @@ else  {
     busco_summary_txt             = BUSCO.out.summary_txt
     busco_full_table              = BUSCO.out.full_table_tsv
     busco_plot                    = BUSCO.out.plot
-
-
+    lastz_results                 = ALIGNMENT_LASTZ.out.lastz_results
+ //   clean_sam                     = REMOVE_PARALOGS.out.clean
+ //   excluded_sam                  = REMOVE_PARALOGS.out.excluded
+    loci_remove                   = REMOVE_PARALOGS.out.loci_remove
+    loci_keep                     = REMOVE_PARALOGS.out.loci_keep
+//    stats_paralogs                = REMOVE_PARALOGS.out.stats
+    table_tsv                     = SUMMARY_REMOVE_PARALOGS.out.table
+    report_md                     = SUMMARY_REMOVE_PARALOGS.out.report_md
+    report_html                   = SUMMARY_REMOVE_PARALOGS.out.report_html
 
 }
+
+
 
 //=========//
 // output
@@ -144,4 +173,14 @@ output {
     busco_summary_txt            {path 'Etape5_analyses_assemblage/BUSCO'}
     busco_full_table             {path 'Etape5_analyses_assemblage/BUSCO'}
     busco_plot                   {path 'Etape5_analyses_assemblage/BUSCO'}
+    lastz_results                {path 'Etape6_alignment_probes_contigs'}
+//    clean_sam                    {path 'Etape7_remove_paralogs/files'}
+//    excluded_sam                 {path 'Etape7_remove_paralogs/files'}
+    loci_remove                  {path 'Etape7_remove_paralogs/files'}
+    loci_keep                    {path 'Etape7_remove_paralogs/files'}
+//    stats_paralogs               {path 'Etape7_remove_paralogs/files'}
+    table_tsv                    {path 'Etape7_remove_paralogs'}
+    report_md                    {path 'Etape7_remove_paralogs'}
+    report_html                  {path 'Etape7_remove_paralogs'}
+
 }
