@@ -152,8 +152,6 @@ process SUMMARY_REMOVE_PARALOGS {
     }' >> remove_paralogs_summary.tsv
 
     {
-    echo "# Rapport : suppression des loci ambigus (paralogues)"
-    echo ""
     echo "Cette étape retire les UCE pour lesquels l'assemblage ne permet pas de désigner un contig unique et fiable."
     echo ""
     echo "- **rm_A** : le locus est touché par plusieurs contigs (deux contigs différents, ou un même contig aligné à deux endroits sur ce locus). On ne peut pas savoir lequel est le bon."

@@ -30,6 +30,7 @@ process QUAST {
 
 
 process BUSCO_DOWNLOAD {
+
     output:
     path "busco_downloads", emit: db
 
@@ -47,7 +48,6 @@ process BUSCO {
     path busco_downloads
 
     output:
-    tuple val(sample), path("busco_${sample}_${params.type_assembly}/logs"),                                                                                      emit: logs
     tuple val(sample), path("busco_${sample}_${params.type_assembly}/short_summary.specific.${params.busco_db}.busco_${sample}_${params.type_assembly}.txt"),     emit: summary_txt
     tuple val(sample), path("busco_${sample}_${params.type_assembly}/run_${params.busco_db}/full_table.tsv"),                                                     emit: full_table_tsv
     tuple val(sample), path("busco_${sample}_${params.type_assembly}/busco_figure.png"),                                                                          emit: plot
@@ -59,5 +59,9 @@ process BUSCO {
 
     busco -i ${contigs} -o busco_${sample}_${params.type_assembly} -m genome -l ${params.busco_db} -c ${task.cpus} --offline --download_path busco_downloads
     busco --plot busco_${sample}_${params.type_assembly}/ --plot_percentages
+
+    rm -rf busco_${sample}_${params.type_assembly}/tmp
+    rm -rf busco_${sample}_${params.type_assembly}/run_${params.busco_db}/{miniprot_output,hmmer_output,busco_sequences}
+    rm -rf busco_${sample}_${params.type_assembly}/logs
     """
 }

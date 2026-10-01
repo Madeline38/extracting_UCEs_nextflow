@@ -11,6 +11,8 @@
 
 process CONTAMINATION {
 
+    maxForks 2
+
     input:
     tuple val(sample), path(reads)
 
@@ -44,6 +46,8 @@ process CONTAMINATION {
 
 process REMOVE {
 
+    maxForks 2
+
     input:
     tuple val(sample), path(reads), path(kraken_report), path(kraken_output)
 
@@ -68,7 +72,7 @@ process REMOVE {
              --include-children \\
              -o "${sample}.unclassified_1.fq" \\
              -o2 "${sample}.unclassified_2.fq" \\
-             --fastq-output
+             --fastq-output > /dev/null
 
 
     # Partie statistiques
@@ -85,21 +89,24 @@ process REMOVE {
 
 
 
-    # Pour zipper les fichiers de sortie et prendre moins de place sur le disque
+    # Pour zipper les fichiers de sortie 
     gzip ${sample}.unclassified_1.fq
     gzip ${sample}.unclassified_2.fq
+
+    rm -f "\$(readlink -f ${kraken_output})"
     """
 }
 
 
 process CHECK {
 
+    maxForks 2
+
     input:
     tuple val(sample), path(clean_reads)
 
     output:
     path "${sample}_clean_kraken_report.txt", emit: report
-    path "${sample}_clean_kraken_output.txt", emit: output
     path "${sample}_decontam.tsv", emit: stats
 
     script:
@@ -112,6 +119,8 @@ process CHECK {
             --report "${sample}_clean_kraken_report.txt" \\
             --output "${sample}_clean_kraken_output.txt"
 
+    
+    rm -rf ${sample}_clean_kraken_output.txt
 
     human_pct=\$(awk -F'\\t' '\$5 == 9606 {print \$1}' ${sample}_clean_kraken_report.txt | tr -d ' ')
     human_pct=\${human_pct:-0}

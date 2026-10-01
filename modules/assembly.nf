@@ -99,6 +99,9 @@ process SPADES_ASSEMBLY {
     echo "Date de fin       : \$(date --iso-8601=seconds)"
 
     if [ \$STATUS -eq 0 ]; then
+        rm -f "\$(readlink -f ${clean_reads[0]})"
+        rm -f "\$(readlink -f ${clean_reads[1]})"
+        rm -rf spades/${sample}/{corrected,tmp,misc,K21,K33,K55}
         echo "======== ${sample} : terminé avec succès ========"
     else
         echo "======== ${sample} : ÉCHEC (code retour \$STATUS) ========"
@@ -123,8 +126,8 @@ process MEGAHIT_ASSEMBLY {
     script:
 
     """
-    module load python/3.11.2
-    module load megahit/1.2.9
+    module load devel/python/Python-3.12.4
+    module load bioinfo/MEGAHIT/1.2.9
 
     echo "===================================================================="
     echo "Échantillon : ${sample}"
@@ -132,35 +135,34 @@ process MEGAHIT_ASSEMBLY {
     echo "Date début  : \$(date --iso-8601=seconds)"
     echo "===================================================================="
 
-    if [ -f "megahit/${sample}/done" ]; then
 
-        echo "======== ${sample} déjà terminé, on ne fait rien ========"
+mkdir -p megahit
 
-    else
+echo "======== ${sample} lancé ! =========="
 
-        echo "======== ${sample} lancé ! =========="
+megahit \\
+    -t ${task.cpus} \\
+    -m ${task.memory.toBytes()} \\
+    -1 "${clean_reads[0]}" \\
+    -2 "${clean_reads[1]}" \\
+    -o "megahit/${sample}"
 
-        megahit \\
-            -t ${task.cpus} \\
-            -m ${task.memory.toBytes()} \\
-            -1 "${clean_reads[0]}" \\
-            -2 "${clean_reads[1]}" \\
-            -o "megahit/${sample}"
+STATUS=\$?
 
-        STATUS=\$?
+if [ \$STATUS -eq 0 ] && [ -f "megahit/${sample}/done" ]; then
+    echo "======== Nettoyage des contigs intermédiaires =========="
+    rm -rf "megahit/${sample}/intermediate_contigs"
+    rm -f "\$(readlink -f ${clean_reads[0]})"
+    rm -f "\$(readlink -f ${clean_reads[1]})"
+    echo "======== ${sample} fini ! =========="
+else
+    echo "======== ${sample} échec... =========="
+    echo "Code retour MEGAHIT : \${STATUS}"
+    exit \$STATUS
+fi
 
-        if [ \$STATUS -eq 0 ] && [ -f "megahit/${sample}/done" ]; then
-            echo "======== Nettoyage des contigs intermédiaires =========="
-            rm -rf "megahit/${sample}/intermediate_contigs"
-            echo "======== ${sample} fini ! =========="
-        else
-            echo "======== ${sample} échec... =========="
-            echo "Code retour MEGAHIT : \${STATUS}"
-            exit \$STATUS
-        fi
-    fi
+echo "Date de fin : \$(date --iso-8601=seconds)"
+echo "======== ${sample} : terminé avec succès ========"
 
-    echo "Date de fin : \$(date --iso-8601=seconds)"
-    echo "======== ${sample} : terminé avec succès ========"
-    """
+"""
 }
