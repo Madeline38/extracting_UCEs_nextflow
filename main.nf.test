@@ -196,11 +196,12 @@ else  {
           }
 
     
-    
+
 
     publish:
     fastqc_before                 = fastqc_before_ch
     multiqc_before                = multiqc_before_ch
+    report_contamination_before   = contam_report_before_ch
     info_contamination            = contam_stats_ch
     info_decontamination          = decontam_stats_ch
     report_contamination_after    = contam_report_after_ch
@@ -231,7 +232,7 @@ else  {
     report_html                   = SUMMARY_REMOVE_PARALOGS.out.report_html
     flanked_sequences             = EXTRACT_FLANKED.out.sequences
     locus_combined                = COMBINE_BY_LOCUS.out.combined.flatten()
-    alignments                    = nexus_ch
+    alignments                    = mafft_ch
     locus_counts                  = COMBINE_BY_LOCUS.out.counts
     nexus_files                   = nexus_ch
     phylip_files                  = phylip_ch
@@ -246,7 +247,8 @@ else  {
 output {
     fastqc_before                {path 'Etape1_analyses/fastqc'}
     multiqc_before               {path 'Etape1_analyses/multiqc'}
-    info_contamination           {path 'Etape2_decontamination/contamination_before'}
+    report_contamination_before  {path 'Etape2_decontamination/contamination_before'}
+    info_contamination           {path 'Etape2_decontamination/contamination_before/stats'}
     info_decontamination         {path 'Etape2_decontamination/new_reads/stats'}
     report_contamination_after   {path 'Etape2_decontamination/contamination_after'}
     info_contamination_after     {path 'Etape2_decontamination/contamination_after/stats'}

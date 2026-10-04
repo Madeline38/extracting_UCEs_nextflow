@@ -12,6 +12,9 @@ process SPADES_ASSEMBLY {
 
     maxForks 2
 
+    container 'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/fe/fed69f1d0cebfa54c4d0500b3415844dce34f36a7fe3e35223bc38b3d38496f5/data'
+    // oras://community.wave.seqera.io/library/spades_bash_gzip_python:08863429beaea175
+
     input:
     tuple val(sample), path(clean_reads)
 
@@ -22,8 +25,8 @@ process SPADES_ASSEMBLY {
     script:
 
     """
-    module load devel/python/Python-3.12.4
-    module load bioinfo/SPAdes/4.2.0
+    #module load devel/python/Python-3.12.4
+    #module load bioinfo/SPAdes/4.2.0
 
     CORRECTION_TIMEOUT=\$((3*3600))
     CHECK_INTERVAL=300
@@ -115,6 +118,8 @@ process MEGAHIT_ASSEMBLY {
 
     maxForks 3
 
+    container 'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/81/81a9d5cd7c71be35af0e0bf93ff9a5362de00d1ecbd31af148bd8f9b43a46efa/data'
+
     input:
     tuple val(sample), path(clean_reads)
 
@@ -126,8 +131,8 @@ process MEGAHIT_ASSEMBLY {
     script:
 
     """
-    module load devel/python/Python-3.12.4
-    module load bioinfo/MEGAHIT/1.2.9
+    #module load devel/python/Python-3.12.4
+    #module load bioinfo/MEGAHIT/1.2.9
 
     echo "===================================================================="
     echo "Échantillon : ${sample}"

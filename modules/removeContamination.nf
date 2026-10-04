@@ -13,6 +13,9 @@ process CONTAMINATION {
 
     maxForks 2
 
+    container 'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/e0/e0ac1be3c45d53e5a1ed60a8cce72cd9832ce204bb44b0e908654866b712bdc9/data'
+    // oras://community.wave.seqera.io/library/kraken2_bash_gzip_python:87f879546f2641d8
+
     input:
     tuple val(sample), path(reads)
 
@@ -22,7 +25,7 @@ process CONTAMINATION {
 
     script:
     """
-    module load bioinfo/Kraken2/2.17.1 
+    #module load bioinfo/Kraken2/2.17.1 
    
     kraken2 --db ${params.kraken_db} \\
             --paired ${reads} \\
@@ -46,7 +49,10 @@ process CONTAMINATION {
 
 process REMOVE {
 
-    maxForks 2
+    maxForks 4
+
+    container 'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/75/752b51b96c1e6b95264be32e9056d30f3d7f0c0e7ad756b269a8854704dc9af9/data'
+    // oras://community.wave.seqera.io/library/kraken2_krakentools_bash_gzip_python:0663353035cc296d
 
     input:
     tuple val(sample), path(reads), path(kraken_report), path(kraken_output)
@@ -58,9 +64,9 @@ process REMOVE {
     script:
 
     """
-    module load bioinfo/Kraken2/2.17.1
-    module load bioinfo/KrakenTools/d4a2fbe
-    module load devel/python/Python-3.12.4
+    #module load bioinfo/Kraken2/2.17.1
+    #module load bioinfo/KrakenTools/d4a2fbe
+    #module load devel/python/Python-3.12.4
 
     extract_kraken_reads.py \\
              -k ${kraken_output} \\
@@ -102,6 +108,9 @@ process CHECK {
 
     maxForks 2
 
+    container 'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/e0/e0ac1be3c45d53e5a1ed60a8cce72cd9832ce204bb44b0e908654866b712bdc9/data'
+    // oras://community.wave.seqera.io/library/kraken2_bash_gzip_python:87f879546f2641d8
+
     input:
     tuple val(sample), path(clean_reads)
 
@@ -111,7 +120,7 @@ process CHECK {
 
     script:
     """
-    module load bioinfo/Kraken2/2.17.1
+    #module load bioinfo/Kraken2/2.17.1
     
     kraken2 --db ${params.kraken_db} \\
             --paired ${clean_reads} \\
@@ -141,6 +150,9 @@ process CHECK {
 
 process CONTAM_SUMMARY {
 
+    container 'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/dc/dcba98ee6037ee71e2852483e0d2fd6275db255218b3425446b5788d30ef8362/data'
+    // oras://community.wave.seqera.io/library/bash_gzip_pandoc_python:12ff9a2d0fc88bf2
+
     input:
     path before_stats
     path removed_stats
@@ -153,7 +165,7 @@ process CONTAM_SUMMARY {
 
     script:
     """
-    module load tools/Pandoc/3.1.2
+    #module load tools/Pandoc/3.1.2
 
     echo -e "sample\\thuman_pct\\tbacteria_pct" > before.tsv
     cat ${before_stats} >> before.tsv
@@ -179,18 +191,16 @@ process CONTAM_SUMMARY {
     echo "Ce rapport présente les résultats de l'analyse de contamination des échantillons. Il inclut les pourcentages de contamination humaine et bactérienne avant la décontamination, ainsi que le nombre de reads avant et après le processus de décontamination. Si la décontamination a été mal réalisée cela sera aussi indiquée."
     echo ""
     echo "## Ressources utilisées"
-    echo "- Mémoire demandée: ${task.memory ?: 'non spécifiée'}"
-    echo "- CPUs demandés: ${task.cpus}"
     echo ""
-    echo "Pour avoir la consommation réelle par processus il faut se référer à : \\`pipeline_info/trace.txt\\` (colonnes \\`%cpu\\`, \\`rss\\`, \\`peak_rss\\` et \\`peak_vmem\\`)."
+    echo "Pour avoir la consommation réelle par processus il faut se référer à : \\`pipeline_info/\\` (colonnes \\`%cpu\\`, \\`rss\\`, \\`peak_rss\\` et \\`peak_vmem\\`)."
     echo ""
     echo "## Résumé de la décontamination"
     echo "| Sample | Humain % | Bactérie % | Reads avant | Reads après | Reads retirés | % retiré | Statut |"
     echo "|---|---|---|---|---|---|---|---|"
     tail -n +2 contamination_summary.tsv | while IFS=\$'\\t' read -r sample human bacteria before after removed pct; do
         status="OK"
-        awk -v h="\$human" 'BEGIN{exit !(h>50)}'  && status="CRITIQUE : contamination humaine > 50%"
-        awk -v h="\$human" 'BEGIN{exit !(h>20)}'  && [ "\$status" = "OK" ] && status="ATTENTION : contamination humaine > 20%"
+        awk -v h="\$human" 'BEGIN{exit !(h>20)}'  && status="CRITIQUE : contamination humaine > 20%"
+        awk -v h="\$human" 'BEGIN{exit !(h>10)}'  && [ "\$status" = "OK" ] && status="ATTENTION : contamination humaine > 10%"
         echo "| \$sample | \$human | \$bacteria | \$before | \$after | \$removed | \$pct | \$status |"
     done
     echo ""

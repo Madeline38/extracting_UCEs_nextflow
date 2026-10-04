@@ -12,6 +12,9 @@ process EXTRACT_FLANKED {
 
     maxForks 100
 
+    container 'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/91/91747ec66b65b4954100cafe626e9a452eecd1af8d802892b25912d472eb1463/data'
+    // oras://community.wave.seqera.io/library/bash_gzip_python:dc01a8ce17bd9a8f
+
     input:
     tuple val(sample), path(clean_sam)
 
@@ -20,7 +23,7 @@ process EXTRACT_FLANKED {
 
     script:
     """
-    module load devel/python/Python-3.12.4
+    #module load devel/python/Python-3.12.4
     extract_flanked.py ${clean_sam} ${sample} ${params.flank}    
     
     """
@@ -31,6 +34,9 @@ process EXTRACT_FLANKED {
 process COMBINE_BY_LOCUS {
 
     maxForks 100
+
+    container 'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/91/91747ec66b65b4954100cafe626e9a452eecd1af8d802892b25912d472eb1463/data'
+    // oras://community.wave.seqera.io/library/bash_gzip_python:dc01a8ce17bd9a8f
 
     input:
     path all_fasta
@@ -69,6 +75,9 @@ process MAFFT {
 
     maxForks 100
 
+    container 'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/c2/c2c14e2ca6c1a12fe806dd8969f52484f2904d5cd457d2872c816da0597df7af/data'
+    // oras://community.wave.seqera.io/library/mafft_bash_gzip_python:3e1548b2f1cdc594
+
     input:
     path locus_fasta
 
@@ -78,10 +87,12 @@ process MAFFT {
     script:
     def locus = locus_fasta.baseName.replaceFirst(/^locus_/, '')
     """
-    module load bioinfo/MAFFT/7.505
+    #module load bioinfo/MAFFT/7.505
 
     mafft --auto --adjustdirection ${locus_fasta} > ${locus}_aligned.fasta
     """
 }
+
+
 
 

@@ -9,6 +9,9 @@
 
 process QUAST {
 
+    container 'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/83/838bdc1f1814c33b437c973ae683aa738a2c9371fcb5e125a595e8981e022295/data'
+    // oras://community.wave.seqera.io/library/quast_bash_gzip:eaa344ac7300e6c5
+
     input:
     tuple val(sample), path(contigs)
 
@@ -22,7 +25,7 @@ process QUAST {
     script:
 
     """
-    module load bioinfo/QUAST/5.2.0
+    #module load bioinfo/QUAST/5.2.0
 
     quast.py ${contigs} --k-mer-stats -o quast_${sample}_${params.type_assembly} -t ${task.cpus}
     """
@@ -31,18 +34,25 @@ process QUAST {
 
 process BUSCO_DOWNLOAD {
 
+    container 'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/e3/e30e7899cb36a14944fd80efc72f89eeb4bb981a6066fc2cbcf6739d9da84012/data'
+    // oras://community.wave.seqera.io/library/busco_bash_gzip_python:78b5e1543946d2df
+
     output:
     path "busco_downloads", emit: db
 
     script:
     """
-    module load devel/Miniforge/Miniforge3
-    module load bioinfo/BUSCO/6.0.0
+    #module load devel/Miniforge/Miniforge3
+    #module load bioinfo/BUSCO/6.0.0
     busco --download ${params.busco_db}
     """
 }
 
 process BUSCO {
+
+    container 'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/e3/e30e7899cb36a14944fd80efc72f89eeb4bb981a6066fc2cbcf6739d9da84012/data'
+    // oras://community.wave.seqera.io/library/busco_bash_gzip_python:78b5e1543946d2df
+
     input:
     tuple val(sample), path(contigs)
     path busco_downloads
@@ -54,8 +64,8 @@ process BUSCO {
     
     script:
     """
-    module load devel/Miniforge/Miniforge3
-    module load bioinfo/BUSCO/6.0.0
+    #module load devel/Miniforge/Miniforge3
+    #module load bioinfo/BUSCO/6.0.0
 
     busco -i ${contigs} -o busco_${sample}_${params.type_assembly} -m genome -l ${params.busco_db} -c ${task.cpus} --offline --download_path busco_downloads
     busco --plot busco_${sample}_${params.type_assembly}/ --plot_percentages

@@ -10,6 +10,9 @@
 
 process REMOVE_PARALOGS {
 
+    container 'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/91/91747ec66b65b4954100cafe626e9a452eecd1af8d802892b25912d472eb1463/data'
+    // oras://community.wave.seqera.io/library/bash_gzip_python:dc01a8ce17bd9a8f
+
     input:
     tuple val(sample), path(sam_files)
 
@@ -123,6 +126,9 @@ process REMOVE_PARALOGS {
 
 process SUMMARY_REMOVE_PARALOGS {
 
+    container 'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/dc/dcba98ee6037ee71e2852483e0d2fd6275db255218b3425446b5788d30ef8362/data'
+    // oras://community.wave.seqera.io/library/bash_gzip_pandoc_python:12ff9a2d0fc88bf2
+
     input:
     path summaries
 
@@ -134,7 +140,7 @@ process SUMMARY_REMOVE_PARALOGS {
     script:
 
     """
-    module load tools/Pandoc/3.1.2
+    #module load tools/Pandoc/3.1.2
 
     echo -e "sample\\tloci_total\\tloci_removed\\tloci_kept\\trm_A\\trm_B\\tpct_removed\\tstatus" > remove_paralogs_summary.tsv
 

@@ -9,6 +9,9 @@
 
 process ALIGNMENT_LASTZ {
 
+    container 'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/88/88752eb83bf732d6ecfa649fc86578142c50b6dc53b4e05c986b1f307430dd6d/data'
+    // oras://community.wave.seqera.io/library/lastz_bash_gzip_python:f9d07a8edb2d3ffc
+
     input:
     tuple val(sample), path (contigs)
     path probes
@@ -19,7 +22,7 @@ process ALIGNMENT_LASTZ {
     script:
     
     """
-    module load bioinfo/LASTZ/1.04.22
+    #module load bioinfo/LASTZ/1.04.22
     
     lastz ${probes}[multiple,unmask] \\
                 "${contigs}"[unmask] \\
