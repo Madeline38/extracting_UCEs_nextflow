@@ -9,7 +9,7 @@
 
 process QUAST {
 
-    container 'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/83/838bdc1f1814c33b437c973ae683aa738a2c9371fcb5e125a595e8981e022295/data'
+    // container 'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/83/838bdc1f1814c33b437c973ae683aa738a2c9371fcb5e125a595e8981e022295/data'
     // oras://community.wave.seqera.io/library/quast_bash_gzip:eaa344ac7300e6c5
 
     input:
@@ -25,7 +25,7 @@ process QUAST {
     script:
 
     """
-    #module load bioinfo/QUAST/5.2.0
+    module load bioinfo/QUAST/5.2.0
 
     quast.py ${contigs} --k-mer-stats -o quast_${sample}_${params.type_assembly} -t ${task.cpus}
     """

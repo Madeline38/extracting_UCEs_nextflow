@@ -45,6 +45,7 @@ process COMBINE_BY_LOCUS {
     output:
     path "locus_*.fasta", optional: true, emit: combined
     path "locus_counts.tsv",             emit: counts
+    path "locus_membership.tsv",         emit: membership
 
     script:
     def min_n = Math.max(2, Math.ceil(params.min_percent * n_samples / 100.0 - 1e-9) as int)
@@ -57,19 +58,25 @@ process COMBINE_BY_LOCUS {
     done
 
     echo -e "locus\\tn_samples\\tstatus" > locus_counts.tsv
+    echo -e "locus\\tsample\\tstatus"    > locus_membership.tsv
+
     for f in locus_*.fasta; do
         [ -e "\$f" ] || continue
         n=\$(grep -c '^>' "\$f")
         if [ "\$n" -lt ${min_n} ]; then
-            echo -e "\${f}\\t\${n}\\tremoved" >> locus_counts.tsv
-            rm "\$f"
+            status=removed
         else
-            echo -e "\${f}\\t\${n}\\tkept" >> locus_counts.tsv
+            status=kept
         fi
+        echo -e "\${f}\\t\${n}\\t\${status}" >> locus_counts.tsv
+
+        # qui était dans ce locus ? (à écrire AVANT le rm)
+        grep '^>' "\$f" | awk -v l="\$f" -v s="\$status" 'BEGIN{OFS="\\t"} {sub(/^>/,""); print l, \$0, s}' >> locus_membership.tsv
+
+        if [ "\$status" = removed ]; then rm "\$f"; fi
     done
     """
 }
-
 
 process MAFFT {
 
@@ -95,4 +102,29 @@ process MAFFT {
 
 
 
+process UCES_ANALYSIS {
+
+    container 'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/dc/dcba98ee6037ee71e2852483e0d2fd6275db255218b3425446b5788d30ef8362/data'
+    // oras://community.wave.seqera.io/library/bash_gzip_pandoc_python:12ff9a2d0fc88bf2
+
+    input:
+    path locus_counts
+    path locus_membership
+    path aligned_fasta
+
+    output:
+    path "uce_summary.html", emit: summary_html
+    path "uce_summary.md",   emit: summary_md
+
+    script:
+    """
+    #module load tools/Pandoc/3.1.2
+
+    uce_report.py ${locus_counts} ${locus_membership} uce_summary.md ${aligned_fasta}
+
+    pandoc uce_summary.md -f markdown -t html -s \\
+        --metadata title="Rapport final du pipeline d'extraction d'uces" \\
+        -o uce_summary.html
+    """
+}
 

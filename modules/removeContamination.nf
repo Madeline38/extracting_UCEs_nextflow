@@ -99,7 +99,7 @@ process REMOVE {
     gzip ${sample}.unclassified_1.fq
     gzip ${sample}.unclassified_2.fq
 
-    rm -f "\$(readlink -f ${kraken_output})"
+    rm -f "\$(readlink -f ${kraken_output})" #si on veut garder en cache la partie décontamination et la suite il ne faut pas supprimer le fichier kraken_output
     """
 }
 

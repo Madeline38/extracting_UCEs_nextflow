@@ -4,16 +4,16 @@
 // modules
 //========//
 
-include { FASTQC_RUN ; MULTIQC_RUN                          } from './modules/fastqcBefore.nf'
-include { CONTAMINATION ; REMOVE ; CHECK ; CONTAM_SUMMARY   } from './modules/removeContamination.nf'
-include { FASTQC_RUN_AFTER ; MULTIQC_RUN_AFTER              } from './modules/fastqcAfter.nf'
-include { SPADES_ASSEMBLY ; MEGAHIT_ASSEMBLY                } from './modules/assembly.nf'
-include { QUAST ; BUSCO_DOWNLOAD ; BUSCO                    } from './modules/qualityAssembly.nf'
-include { ALIGNMENT_LASTZ                                   } from './modules/matchContigsToProbes.nf'
-include { REMOVE_PARALOGS ; SUMMARY_REMOVE_PARALOGS         } from './modules/removeParalogs.nf'
-include { EXTRACT_FLANKED ; COMBINE_BY_LOCUS ; MAFFT        } from './modules/multipleAlignement.nf'
-include { TRIMAL                                            } from './modules/cleaningMSA.nf'
-include { NEXUS_FORMAT ; PHYLIP_FORMAT                      } from './modules/phylogeneticFormat.nf'
+include { FASTQC_RUN ; MULTIQC_RUN                                   } from './modules/fastqcBefore.nf'
+include { CONTAMINATION ; REMOVE ; CHECK ; CONTAM_SUMMARY            } from './modules/removeContamination.nf'
+include { FASTQC_RUN_AFTER ; MULTIQC_RUN_AFTER                       } from './modules/fastqcAfter.nf'
+include { SPADES_ASSEMBLY ; MEGAHIT_ASSEMBLY                         } from './modules/assembly.nf'
+include { QUAST ; BUSCO_DOWNLOAD ; BUSCO                             } from './modules/qualityAssembly.nf'
+include { ALIGNMENT_LASTZ                                            } from './modules/matchContigsToProbes.nf'
+include { REMOVE_PARALOGS ; SUMMARY_REMOVE_PARALOGS                  } from './modules/removeParalogs.nf'
+include { EXTRACT_FLANKED ; COMBINE_BY_LOCUS ; MAFFT ; UCES_ANALYSIS } from './modules/multipleAlignement.nf'
+include { TRIMAL                                                     } from './modules/cleaningMSA.nf'
+include { NEXUS_FORMAT ; PHYLIP_FORMAT                               } from './modules/phylogeneticFormat.nf'
 
 
 
@@ -177,6 +177,11 @@ else  {
         mafft_ch = TRIMAL.out.trimmed_aligned
     }
 
+    UCES_ANALYSIS(
+    COMBINE_BY_LOCUS.out.counts,
+    COMBINE_BY_LOCUS.out.membership,
+    mafft_ch.collect()
+    )
 
     // do reformat
 
@@ -233,6 +238,8 @@ else  {
     flanked_sequences             = EXTRACT_FLANKED.out.sequences
     locus_combined                = COMBINE_BY_LOCUS.out.combined.flatten()
     alignments                    = mafft_ch
+    uce_summary_html              = UCES_ANALYSIS.out.summary_html
+    uce_summary_md                = UCES_ANALYSIS.out.summary_md
     locus_counts                  = COMBINE_BY_LOCUS.out.counts
     nexus_files                   = nexus_ch
     phylip_files                  = phylip_ch
@@ -279,7 +286,9 @@ output {
     flanked_sequences            {path 'Etape8_alignements/flanked'}
     locus_combined               {path 'Etape8_alignements/loci'}
     alignments                   {path 'Etape8_alignements/mafft'}
+    uce_summary_html             {path 'Etape9_final_files'}
+    uce_summary_md               {path 'Etape9_final_files'}
     locus_counts                 {path 'Etape8_alignements'}
-    nexus_files                   {path 'Etape9_final_files/nexus'}
-    phylip_files                  {path 'Etape9_final_files/phylip'}
+    nexus_files                  {path 'Etape9_final_files/nexus'}
+    phylip_files                 {path 'Etape9_final_files/phylip'}
 }
