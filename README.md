@@ -4,6 +4,8 @@
 🚧 This pipeline is still under construction 🚧
   
 Feel free to try to use anything in here, but I make no promises that it will work as it is supposed to.
+
+Without any modifications it will only work on genotoul cluster for the moment 
 </center>
 
 ***
