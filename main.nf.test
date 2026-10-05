@@ -31,7 +31,9 @@ if ( !(params.probes ==~ /.*\.(fasta|fa)$/) )
     error "Your probe file is not a fasta file, please use the format <name_probes_file.fasta>"
 probes_file = file(params.probes, checkIfExists: true)
 
-if ( params.min_percent < 0 || params.min_percent > 100 )
+def min_percent = params.min_percent.toString().toFloat()
+
+if ( min_percent < 0 || min_percent > 100 )
     error "--min_percent doit être compris entre 0 et 100"
 
 // canaux par défaut (vides) pour les étapes pouvant être sautées
