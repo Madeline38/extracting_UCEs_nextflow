@@ -34,14 +34,6 @@ This pipeline extracts **Ultra-Conserved Elements (UCEs)** from DNA sequencing r
 Outputs are published under the `outdir` directory (default: `results/`; see [Outputs](#outputs)).
 
 
-## Notes from previous runs
-
-- The number of reads removed during decontamination depends on the Kraken2 database and the samples.
-- SPAdes took substantially longer than MEGAHIT. Runtime and assembly quality depend on the dataset and available resources; benchmark both assemblers for your data if needed.
-- Alignment trimming is optional (`--trimming trimal`). Compare trimmed and untrimmed alignments to determine whether trimming is appropriate for your analysis but most of the time it is not really good.
-- Nextflow can reuse cached tasks with `-resume` when task inputs and outputs are available. The decontamination process removes its Kraken2 output file after read extraction, so this intermediate file is not retained for reuse. Keeping it would require changing the process and would consume additional disk space. (if you really want to do it you have to suppress this line "rm -f "\$(readlink -f ${kraken_output})"" in removeContamination)
-
-
 ## Requirements
 
 - A SLURM cluster configured for the `workq` queue, as specified in `nextflow.config`
@@ -140,6 +132,13 @@ results/
 ```
 
 Some directories are only populated when their corresponding steps run (for example, decontamination outputs when `--skip_decontamination true` is not set).
+
+## Notes from previous runs
+
+- The number of reads removed during decontamination depends on the Kraken2 database and the samples.
+- SPAdes took substantially longer than MEGAHIT. Runtime and assembly quality depend on the dataset and available resources; benchmark both assemblers for your data if needed.
+- Alignment trimming is optional (`--trimming trimal`). Compare trimmed and untrimmed alignments to determine whether trimming is appropriate for your analysis but most of the time it is not really good.
+- Nextflow can reuse cached tasks with `-resume` when task inputs and outputs are available. The decontamination process removes its Kraken2 output file after read extraction, so this intermediate file is not retained for reuse. Keeping it would require changing the process and would consume additional disk space. (if you really want to do it you have to suppress this line "rm -f "\$(readlink -f ${kraken_output})"" in removeContamination)
 
 ## Resources
 
