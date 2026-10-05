@@ -4,14 +4,16 @@
 // modules
 //========//
 
-include { FASTQC_RUN ; MULTIQC_RUN                          } from './modules/fastqcBefore.nf'
-include { CONTAMINATION ; REMOVE ; CHECK ; CONTAM_SUMMARY   } from './modules/removeContamination.nf'
-include { FASTQC_RUN_AFTER ; MULTIQC_RUN_AFTER              } from './modules/fastqcAfter.nf'
-include { SPADES_ASSEMBLY ; MEGAHIT_ASSEMBLY                } from './modules/assembly.nf'
-include { QUAST ; BUSCO_DOWNLOAD ; BUSCO                    } from './modules/qualityAssembly.nf'
-include { ALIGNMENT_LASTZ                                   } from './modules/matchContigsToProbes.nf'
-include { REMOVE_PARALOGS ; SUMMARY_REMOVE_PARALOGS         } from './modules/removeParalogs.nf'
-include { EXTRACT_FLANKED ; COMBINE_BY_LOCUS ; MAFFT        } from './modules/multipleAlignement.nf'
+include { FASTQC_RUN ; MULTIQC_RUN                                   } from './modules/fastqcBefore.nf'
+include { CONTAMINATION ; REMOVE ; CHECK ; CONTAM_SUMMARY            } from './modules/removeContamination.nf'
+include { FASTQC_RUN_AFTER ; MULTIQC_RUN_AFTER                       } from './modules/fastqcAfter.nf'
+include { SPADES_ASSEMBLY ; MEGAHIT_ASSEMBLY                         } from './modules/assembly.nf'
+include { QUAST ; BUSCO_DOWNLOAD ; BUSCO                             } from './modules/qualityAssembly.nf'
+include { ALIGNMENT_LASTZ                                            } from './modules/matchContigsToProbes.nf'
+include { REMOVE_PARALOGS ; SUMMARY_REMOVE_PARALOGS                  } from './modules/removeParalogs.nf'
+include { EXTRACT_FLANKED ; COMBINE_BY_LOCUS ; MAFFT ; UCES_ANALYSIS } from './modules/multipleAlignement.nf'
+include { TRIMAL                                                     } from './modules/cleaningMSA.nf'
+include { NEXUS_FORMAT ; PHYLIP_FORMAT                               } from './modules/phylogeneticFormat.nf'
 
 
 
@@ -29,6 +31,10 @@ if ( !(params.probes ==~ /.*\.(fasta|fa)$/) )
     error "Your probe file is not a fasta file, please use the format <name_probes_file.fasta>"
 probes_file = file(params.probes, checkIfExists: true)
 
+def min_percent = params.min_percent.toString().toFloat()
+
+if ( min_percent < 0 || min_percent > 100 )
+    error "--min_percent doit être compris entre 0 et 100"
 
 // canaux par défaut (vides) pour les étapes pouvant être sautées
 def fastqc_before_ch        = channel.empty()
@@ -39,7 +45,6 @@ def contam_stats_ch         = channel.empty()
 def clean_reads_pub_ch      = channel.empty()
 def decontam_stats_ch       = channel.empty()
 def contam_report_after_ch  = channel.empty()
-def contam_reads_after_ch   = channel.empty()
 def contam_stats_after_ch   = channel.empty()
 def contam_summary_table_ch = channel.empty()
 def contam_summary_full_ch  = channel.empty()
@@ -48,6 +53,11 @@ def fastqc_after_ch         = channel.empty()
 def multiqc_after_ch        = channel.empty()
 def logs_ch                 = channel.empty()
 def contigs_ch              = channel.empty()
+def nexus_ch                = channel.empty()
+def phylip_ch               = channel.empty()
+def mafft_ch                = channel.empty()
+
+
 
 
 if ( !params.skip_assembly ) {
@@ -97,7 +107,6 @@ if ( !params.skip_assembly ) {
             clean_reads_pub_ch      = REMOVE.out.clean_reads
             decontam_stats_ch       = REMOVE.out.stats
             contam_report_after_ch  = CHECK.out.report
-            contam_reads_after_ch   = CHECK.out.output
             contam_stats_after_ch   = CHECK.out.stats
             contam_summary_table_ch = CONTAM_SUMMARY.out.table
             contam_summary_full_ch  = CONTAM_SUMMARY.out.report
@@ -152,26 +161,57 @@ else  {
     // do multiple alignment
     EXTRACT_FLANKED(REMOVE_PARALOGS.out.clean)
 
+    n_samples_ch = REMOVE_PARALOGS.out.clean.count()
+
     COMBINE_BY_LOCUS(
         EXTRACT_FLANKED.out.sequences
             .map { sample, files -> files }
             .flatten()
-            .collect()
+            .collect(),
+        n_samples_ch
     )
 
     MAFFT(COMBINE_BY_LOCUS.out.combined.flatten())
+    mafft_ch = MAFFT.out.aligned
+
+    if ( params.trimming == 'trimal' ) {
+        TRIMAL(mafft_ch)
+        mafft_ch = TRIMAL.out.trimmed_aligned
+    }
+
+    UCES_ANALYSIS(
+    COMBINE_BY_LOCUS.out.counts,
+    COMBINE_BY_LOCUS.out.membership,
+    mafft_ch.collect()
+    )
+
+    // do reformat
+
+    def valid_phylogenetic_format = ['nexus', 'phylip']
+    if ( !valid_phylogenetic_format.contains(params.phylogenetic_format) ) {
+        error "Unrecognised phylogenetic_format: '${params.phylogenetic_format}'. Options: ${valid_phylogenetic_format.join(', ')}"
+    }
+
+    if (params.phylogenetic_format == 'nexus') {
+        NEXUS_FORMAT (mafft_ch)
+        nexus_ch = NEXUS_FORMAT.out.nexus
+        }
+          
+    else {
+        PHYLIP_FORMAT (mafft_ch)
+        phylip_ch = PHYLIP_FORMAT.out.phylip
+          }
+
+    
 
 
     publish:
     fastqc_before                 = fastqc_before_ch
     multiqc_before                = multiqc_before_ch
     report_contamination_before   = contam_report_before_ch
-    reads_c_or_u_before           = contam_reads_before_ch
     info_contamination            = contam_stats_ch
-    clean_reads                   = clean_reads_pub_ch
     info_decontamination          = decontam_stats_ch
     report_contamination_after    = contam_report_after_ch
-    reads_c_or_u_after            = contam_reads_after_ch
     info_contamination_after      = contam_stats_after_ch
     summary_decontamination       = contam_summary_table_ch
     summary_decontamination_full  = contam_summary_full_ch
@@ -185,7 +225,6 @@ else  {
     quast_report_html             = QUAST.out.report_html
     quast_basic_stats             = QUAST.out.basic_stats
     quast_icarus_viewers          = QUAST.out.icarus_viewers
-    busco_logs                    = BUSCO.out.logs
     busco_summary_txt             = BUSCO.out.summary_txt
     busco_full_table              = BUSCO.out.full_table_tsv
     busco_plot                    = BUSCO.out.plot
@@ -200,7 +239,12 @@ else  {
     report_html                   = SUMMARY_REMOVE_PARALOGS.out.report_html
     flanked_sequences             = EXTRACT_FLANKED.out.sequences
     locus_combined                = COMBINE_BY_LOCUS.out.combined.flatten()
-    alignments                    = MAFFT.out.aligned
+    alignments                    = mafft_ch
+    uce_summary_html              = UCES_ANALYSIS.out.summary_html
+    uce_summary_md                = UCES_ANALYSIS.out.summary_md
+    locus_counts                  = COMBINE_BY_LOCUS.out.counts
+    nexus_files                   = nexus_ch
+    phylip_files                  = phylip_ch
 }
 
 
@@ -210,43 +254,43 @@ else  {
 //=========//
 
 output {
-    fastqc_before                {path 'Etape1_analyses/fastqc'}
-    multiqc_before               {path 'Etape1_analyses/multiqc'}
-//    report_contamination_before  {path 'Etape2_decontamination/contamination_before'}
-//    reads_c_or_u_before          {path 'Etape2_decontamination/contamination_before'}
-    info_contamination           {path 'Etape2_decontamination/contamination_before'}
-    clean_reads                  {path 'Etape2_decontamination/new_reads/clean_reads'}
-    info_decontamination         {path 'Etape2_decontamination/new_reads/stats'}
-    report_contamination_after   {path 'Etape2_decontamination/contamination_after'}
-    reads_c_or_u_after           {path 'Etape2_decontamination/contamination_after'}
-    info_contamination_after     {path 'Etape2_decontamination/contamination_after/stats'}
-    summary_decontamination      {path 'Etape2_decontamination'}
-    summary_decontamination_full {path 'Etape2_decontamination'}
-    summary_decontamination_html {path 'Etape2_decontamination'}
-    fastqc_after                 {path 'Etape3_analyses_post_decontamination/fastqc'}
-    multiqc_after                {path 'Etape3_analyses_post_decontamination/multiqc'}
-    assembly_contigs             {path 'Etape4_assemblage/contigs'}
-    assembly_logs                {path 'Etape4_assemblage/logs'}
-    quast_report_txt             {path 'Etape5_analyses_assemblage/QUAST'}
-    quast_report_tsv             {path 'Etape5_analyses_assemblage/QUAST'}
-    quast_report_html            {path 'Etape5_analyses_assemblage/QUAST'}
-    quast_basic_stats            {path 'Etape5_analyses_assemblage/QUAST'}
-    quast_icarus_viewers         {path 'Etape5_analyses_assemblage/QUAST'}
-    busco_logs                   {path 'Etape5_analyses_assemblage/BUSCO'}
-    busco_summary_txt            {path 'Etape5_analyses_assemblage/BUSCO'}
-    busco_full_table             {path 'Etape5_analyses_assemblage/BUSCO'}
-    busco_plot                   {path 'Etape5_analyses_assemblage/BUSCO'}
-    lastz_results                {path 'Etape6_alignment_probes_contigs'}
-    clean_sam                    {path 'Etape7_remove_paralogs/files/sam_clean'}
-    excluded_sam                 {path 'Etape7_remove_paralogs/files/sam_removed'}
-    loci_remove                  {path 'Etape7_remove_paralogs/files'}
-    loci_keep                    {path 'Etape7_remove_paralogs/files'}
-    stats_paralogs               {path 'Etape7_remove_paralogs/files'}
-    table_tsv                    {path 'Etape7_remove_paralogs'}
-    report_md                    {path 'Etape7_remove_paralogs'}
-    report_html                  {path 'Etape7_remove_paralogs'}
-    flanked_sequences            {path 'Etape8_alignements/flanked'}
-    locus_combined               {path 'Etape8_alignements/loci'}
-    alignments                   {path 'Etape8_alignements/mafft'}
-
+    fastqc_before                {path 'Etape_1_analyses/fastqc'}
+    multiqc_before               {path 'Etape_1_analyses/multiqc'}
+    report_contamination_before  {path 'Etape_2_decontamination/contamination_before'}
+    info_contamination           {path 'Etape_2_decontamination/contamination_before/stats'}
+    info_decontamination         {path 'Etape_2_decontamination/new_reads/stats'}
+    report_contamination_after   {path 'Etape_2_decontamination/contamination_after'}
+    info_contamination_after     {path 'Etape_2_decontamination/contamination_after/stats'}
+    summary_decontamination      {path 'Etape_2_decontamination'}
+    summary_decontamination_full {path 'Etape_2_decontamination'}
+    summary_decontamination_html {path 'Etape_2_decontamination'}
+    fastqc_after                 {path 'Etape_3_analyses_post_decontamination/fastqc'}
+    multiqc_after                {path 'Etape_3_analyses_post_decontamination/multiqc'}
+    assembly_contigs             {path 'Etape_4_assemblage/contigs'}
+    assembly_logs                {path 'Etape_4_assemblage/logs'}
+    quast_report_txt             {path 'Etape_5_analyses_assemblage/QUAST'}
+    quast_report_tsv             {path 'Etape_5_analyses_assemblage/QUAST'}
+    quast_report_html            {path 'Etape_5_analyses_assemblage/QUAST'}
+    quast_basic_stats            {path 'Etape_5_analyses_assemblage/QUAST'}
+    quast_icarus_viewers         {path 'Etape_5_analyses_assemblage/QUAST'}
+    busco_summary_txt            {path 'Etape_5_analyses_assemblage/BUSCO'}
+    busco_full_table             {path 'Etape_5_analyses_assemblage/BUSCO'}
+    busco_plot                   {path 'Etape_5_analyses_assemblage/BUSCO'}
+    lastz_results                {path 'Etape_6_alignment_probes_contigs'}
+    clean_sam                    {path 'Etape_7_remove_paralogs/files/sam_clean'}
+    excluded_sam                 {path 'Etape_7_remove_paralogs/files/sam_removed'}
+    loci_remove                  {path 'Etape_7_remove_paralogs/files'}
+    loci_keep                    {path 'Etape_7_remove_paralogs/files'}
+    stats_paralogs               {path 'Etape_7_remove_paralogs/files'}
+    table_tsv                    {path 'Etape_7_remove_paralogs'}
+    report_md                    {path 'Etape_7_remove_paralogs'}
+    report_html                  {path 'Etape_7_remove_paralogs'}
+    flanked_sequences            {path 'Etape_8_alignements/flanked'}
+    locus_combined               {path 'Etape_8_alignements/loci'}
+    alignments                   {path 'Etape_8_alignements/mafft'}
+    uce_summary_html             {path 'Etape_9_final_files'}
+    uce_summary_md               {path 'Etape_9_final_files'}
+    locus_counts                 {path 'Etape_8_alignements'}
+    nexus_files                  {path 'Etape_9_final_files/nexus'}
+    phylip_files                 {path 'Etape_9_final_files/phylip'}
 }
