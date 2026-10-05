@@ -26,11 +26,11 @@ This pipeline extracts **Ultra-Conserved Elements (UCEs)** from DNA sequencing r
 | 1 | `fastqcBefore` | [Fastqc](https://github.com/s-andrews/fastqc) & [multiqc](https://github.com/multiqc/multiqc) | Assess read quality before decontamination (read-input mode only). |
 | 2 | `removeContamination` | Kraken2 | Identify and remove human-classified reads; skipped with `--skip_decontamination true`. |
 | 3 | `fastqcAfter` | [Fastqc](https://github.com/s-andrews/fastqc) & [multiqc](https://github.com/multiqc/multiqc) | Assess read quality after decontamination (when decontamination is enabled). |
-| 4 | `asssembly` | [MEGAHIT](https://github.com/voutcn/MEGAHIT) or [SPAdes](https://github.com/ablab/spades) | Assemble paired reads into contigs, unless existing contigs are supplied with `--skip_assembly true`. |
+| 4 | `assembly` | [MEGAHIT](https://github.com/voutcn/MEGAHIT) or [SPAdes](https://github.com/ablab/spades) | Assemble paired reads into contigs, unless existing contigs are supplied with `--skip_assembly true`. |
 | 5 | `qualityAssembly` | [QUAST](https://github.com/ablab/quast) & [BUSCO](https://busco.ezlab.org/) | Evaluate assembly statistics and completeness of the contigs. |
 | 6 | `matchContigsToProbes` | LASTZ | Align contigs against the supplied UCE probe FASTA. |
 | 7 | `removeParalogs` | Paralogue filtering script | Exclude loci with ambiguous or multiple contig-to-locus matches. |
-| 8 | `multipleAlignment` | Flank extraction, locus filtering, [MAFFT](https://github.com/GSLBiotech/mafft) | Extract flanked sequences, retain loci meeting `min_percent`, and align them by locus. TrimAl can optionally trim the alignments. Also produce the UCE summary report|
+| 8 | `multipleAlignment` | Flank extraction, locus filtering, [MAFFT](https://github.com/GSLBiotech/mafft) | Extract flanked sequences, retain loci meeting `min_percent`, align them by locus, and produce the UCE summary report. TrimAl can optionally trim alignments. |
 | 9 | `phylogeneticFormat` | Biopython package | Convert alignments to Nexus or Phylip. |
 
 Outputs are published under the `outdir` directory (default: `results/`; see [Outputs](#outputs)).
@@ -70,11 +70,6 @@ cd extracting_UCEs_nextflow
 nextflow run main.nf
 ```
 
-To resume an interrupted run, or reuse valid cached tasks after changing downstream steps:
-
-```bash
-nextflow run main.nf -resume
-```
 
 ## Parameters (`nextflow.config`)
 
@@ -87,9 +82,9 @@ nextflow run main.nf -resume
 | `contigs` | none | Directory containing input contig FASTA files. Required when `--skip_assembly true` is used; the workflow looks for `*.fasta` files. |
 | `type_assembly` | `megahit` | Assembler to use: `megahit` or `spades`. |
 | `busco_db` | `hymenoptera_odb12` | BUSCO lineage database used to assess assembly completeness. |
-| `probes` | none | FASTA file of UCE probes. Required in every execution modes. |
+| `probes` | none | FASTA file of UCE probes. Required in both execution modes. |
 | `flank` | `160` | Number of bases to extract on each side of a matched UCE. |
-| `min_percent` | `75` | Minimum percentage of samples in which a locus must be present to retain it (0-100). |
+| `min_percent` | `75` | Minimum percentage of samples in which a locus must be present to retain it (0–100). At least two samples are required for a locus to be retained. |
 | `trimming` | `none` | Optional alignment trimming. Use `trimal` to enable TrimAl; default is no trimming. |
 | `phylogenetic_format` | `nexus` | Output alignment format: `nexus` or `phylip`. |
 | `outdir` | `results` | Output directory for published files and pipeline reports. |
@@ -117,6 +112,16 @@ nextflow run main.nf \
   --outdir results
 ```
 
+To resume an interrupted run or reuse valid cached tasks after changing downstream steps, repeat the original command and add `-resume`, for example:
+
+```bash
+nextflow run main.nf \
+  --reads clean-fastq \
+  --probes probes_hymeno_assembled_wrap.fasta \
+  --outdir results \
+  -resume
+```
+
 ## Outputs
 
 ```
@@ -139,12 +144,12 @@ Some directories are only populated when their corresponding steps run (for exam
 
 - The number of reads removed during decontamination depends on the Kraken2 database and the samples.
 - SPAdes took substantially longer than MEGAHIT. Runtime and assembly quality depend on the dataset and available resources; benchmark both assemblers for your data if needed.
-- Alignment trimming is optional (`--trimming trimal`). Compare trimmed and untrimmed alignments to determine whether trimming is appropriate for your analysis but most of the time it is not really good.
-- Nextflow can reuse cached tasks with `-resume` when task inputs and outputs are available. The decontamination process removes its Kraken2 output file after read extraction, so this intermediate file is not retained for reuse. Keeping it would require changing the process and would consume additional disk space. (if you really want to do it you have to suppress this line "rm -f "\$(readlink -f ${kraken_output})"" in removeContamination)
+- Alignment trimming is optional (`--trimming trimal`). Compare trimmed and untrimmed alignments to decide whether trimming is appropriate for your data.
+- Nextflow can reuse cached tasks with `-resume` when task inputs and outputs are available. The decontamination process removes its Kraken2 output file after read extraction, so this intermediate file is not retained. Keeping it would require modifying the decontamination process and would consume additional disk space.
 
 ## Resources
 
-As an example, a previous run with 21 shotgun samples (approximately 5 GB per read file), using MEGAHIT assembly, it took about 17 hours 42 minutes and used approximately 500 GB of disk space. These figures are dataset- and cluster-specific; actual resource requirements may differ substantially.
+As an example, a previous run with 21 shotgun samples and MEGAHIT assembly took about 17 hours 42 minutes and used approximately 500 GB of disk space. The read-file size for that run was approximately 5 GB per FASTQ file. These figures are dataset- and cluster-specific; actual resource requirements may differ substantially.
 
 ## Learning more
 

@@ -24,6 +24,9 @@ process SPADES_ASSEMBLY {
 
     script:
 
+    def cleanup_reads = params.skip_decontamination ? '' :
+        'rm -f "$(readlink -f ' + clean_reads[0] + ')" "$(readlink -f ' + clean_reads[1] + ')" || true'
+
     """
     #module load devel/python/Python-3.12.4
     #module load bioinfo/SPAdes/4.2.0
@@ -102,8 +105,7 @@ process SPADES_ASSEMBLY {
     echo "Date de fin       : \$(date --iso-8601=seconds)"
 
     if [ \$STATUS -eq 0 ]; then
-        rm -f "\$(readlink -f ${clean_reads[0]})"
-        rm -f "\$(readlink -f ${clean_reads[1]})"
+        ${cleanup_reads}
         rm -rf spades/${sample}/{corrected,tmp,misc,K21,K33,K55}
         echo "======== ${sample} : terminé avec succès ========"
     else
@@ -129,6 +131,9 @@ process MEGAHIT_ASSEMBLY {
     tuple val(sample), path("megahit/${sample}/done"),             emit: done
 
     script:
+
+    def cleanup_reads = params.skip_decontamination ? '' :
+        'rm -f "$(readlink -f ' + clean_reads[0] + ')" "$(readlink -f ' + clean_reads[1] + ')" || true'
 
     """
     #module load devel/python/Python-3.12.4
@@ -157,8 +162,7 @@ STATUS=\$?
 if [ \$STATUS -eq 0 ] && [ -f "megahit/${sample}/done" ]; then
     echo "======== Nettoyage des contigs intermédiaires =========="
     rm -rf "megahit/${sample}/intermediate_contigs"
-    rm -f "\$(readlink -f ${clean_reads[0]})"
-    rm -f "\$(readlink -f ${clean_reads[1]})"
+    ${cleanup_reads}
     echo "======== ${sample} fini ! =========="
 else
     echo "======== ${sample} échec... =========="
