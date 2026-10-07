@@ -96,7 +96,7 @@ process MAFFT {
     """
     #module load bioinfo/MAFFT/7.505
 
-    mafft --auto --adjustdirection ${locus_fasta} > ${locus}_aligned.fasta
+    mafft --auto ${locus_fasta} > ${locus}_aligned.fasta
     """
 }
 
@@ -119,7 +119,7 @@ process UCES_ANALYSIS {
     script:
     """
     #module load tools/Pandoc/3.1.2
-
+Le préfixe _R_ est ajouté par MAFFT, pas par le convertisseur PHYLIP. Dans le pipeline, MAFFT est lancé avec --adjustdirection, qui lui permet de retourner en complément inverse les séquences orientées à l’opposé. Il marque ces séquences en préfix
     uce_report.py ${locus_counts} ${locus_membership} uce_summary.md ${aligned_fasta}
 
     pandoc uce_summary.md -f markdown -t html -s \\
