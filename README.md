@@ -5,7 +5,7 @@
   
 Feel free to try to use anything in here, but I make no promises that it will work as it is supposed to.
 
-Without any modifications it will only work on genotoul cluster for the moment 
+Without any modifications it will only work on genotoul cluster
 </center>
 
 ***
@@ -17,7 +17,7 @@ French national project funded by *PEPR Dynamiques de la Biodiversité Terrestre
 
 ## Objective
 
-This pipeline extracts **Ultra-Conserved Elements (UCEs)** from DNA sequencing reads in order to build a phylogenetic tree.
+{name_pipeline} is a bioinformatics pipeline that can be used to extract **Ultra-Conserved Elements (UCEs)** from DNA sequencing reads in order to build a phylogenetic tree.
 
 ## Pipeline steps (`modules/')
 
@@ -38,14 +38,23 @@ Outputs are published under the `outdir` directory (default: `results/`; see [Ou
 
 ## Requirements
 
-- A SLURM cluster configured for the `workq` queue, as specified in `nextflow.config`
+- A SLURM cluster configured for the `workq` queue, as specified in `nextflow.config` which normally is related to Genotoul cluster
 - Nextflow 25.10.2 (or a later version) available as a module, for example:
   ```bash
   module avail nextflow
-  module load nextflow/25.10.2
+  module load bioinfo/Nextflow/26.04.6
   ```
-- Singularity/Apptainer available for running the containers.
-- If decontamination is enabled, an accessible Kraken2 database. The default path is cluster-specific and can be overridden with `--kraken_db`.
+- Singularity/Apptainer available for running the containers :
+  ```bash
+  module avail apptainer
+  module load containers/Apptainer/1.4.1
+  ```
+- Java available :
+  ```bash
+  module avail java
+  module load devel/java/24.0.2
+  ```
+- If decontamination is enabled, an accessible Kraken2 database. The default path is genotoul cluster-specific and can be overridden with `--kraken_db`.
 
 ## Input data
 
@@ -53,7 +62,9 @@ Outputs are published under the `outdir` directory (default: `results/`; see [Ou
   ```
   clean-fastq/
   ├── ANIC00017_0101.1.fastq.gz
-  └── ANIC00017_0101.2.fastq.gz
+  ├── ANIC00017_0101.2.fastq.gz
+  ├── GDEL00541_0101.1.fastq.gz
+  └── GDEL00541_0101.2.fastq.gz
   ```
 - **Probes**: a fasta file containing the full set of UCE probes (e.g. `probes_hymeno_assembled_wrap.fasta`).
 - **Existing contigs (optional)**: when using `--skip_assembly true`, provide a directory containing one or more `.fasta` files with the contigs for each sample.
@@ -67,7 +78,7 @@ Outputs are published under the `outdir` directory (default: `results/`; see [Ou
 ```bash
 git clone https://github.com/Madeline38/extracting_UCEs_nextflow.git
 cd extracting_UCEs_nextflow
-nextflow run main.nf
+nextflow run main.nf --reads [raw_data] --probes [probes_file] [OPTION]
 ```
 
 
@@ -75,18 +86,19 @@ nextflow run main.nf
 
 | Parameter | Default value | Description |
 |---|---|---|
-| `reads` | none | Directory containing paired, compressed FASTQ reads. Required unless `--skip_assembly true` is used. |
+| `reads` | `none` | Directory containing paired, compressed FASTQ reads. Required unless `--skip_assembly true` is used. |
 | `skip_decontamination` | `false` | Set to `true` to skip human-read decontamination when starting from reads. |
 | `kraken_db` | `'/bank/kraken/k2_pluspfp_20251015'` | Path to the Kraken2 database used for decontamination. This default is environment-specific. |
+| `keep_kraken_output` | `false` | Keep the large intermediate files produced by Kraken2 during the decontamination step. Enabling this preserves more cached data, which speeds up reruns with -resume, but requires significant disk space. By default, these files are deleted. |
 | `skip_assembly` | `false` | Set to `true` to skip read processing and assembly and use existing contigs instead. |
-| `contigs` | none | Directory containing input contig FASTA files. Required when `--skip_assembly true` is used; the workflow looks for `*.fasta` files. |
+| `contigs` | `none` | Directory containing input contig FASTA files. Required when `--skip_assembly true` is used; the workflow looks for `*.fasta` files. |
 | `type_assembly` | `megahit` | Assembler to use: `megahit` or `spades`. |
 | `busco_db` | `hymenoptera_odb12` | BUSCO lineage database used to assess assembly completeness. |
-| `probes` | none | FASTA file of UCE probes. Required in both execution modes. |
+| `probes` | `none` | FASTA file of UCE probes. Required in both execution modes. |
 | `flank` | `160` | Number of bases to extract on each side of a matched UCE. |
 | `min_percent` | `75` | Minimum percentage of samples in which a locus must be present to retain it (0–100). At least two samples are required for a locus to be retained. |
 | `trimming` | `none` | Optional alignment trimming. Use `trimal` to enable TrimAl; default is no trimming. |
-| `phylogenetic_format` | `nexus` | Output alignment format: `nexus` or `phylip`. |
+| `phylogenetic_format` | `phylip` | Output alignment format: `nexus` or `phylip`. |
 | `outdir` | `results` | Output directory for published files and pipeline reports. |
 
 
@@ -126,16 +138,16 @@ nextflow run main.nf \
 
 ```
 results/
-├── Etape1_analyses/                      # FastQC and MultiQC before decontamination
-├── Etape2_decontamination/               # Kraken2 reports, cleaned reads, and summary
-├── Etape3_analyses_post_decontamination/ # FastQC and MultiQC after decontamination
-├── Etape4_assemblage/                    # contigs and assembly logs
-├── Etape5_analyses_assemblage/           # QUAST and BUSCO results
-├── Etape6_alignment_probes_contigs/      # LASTZ probe-matching results
-├── Etape7_remove_paralogs/               # filtered SAM files and paralogue reports
-├── Etape8_alignements/                   # flanked sequences, loci, and MAFFT alignments
-├── Etape9_final_files/                   # UCE summary and Nexus/Phylip output
-└── pipeline_info/                        # Nextflow report, timeline, and trace
+├── Etape_1_analyses/                      # FastQC and MultiQC before decontamination
+├── Etape_2_decontamination/               # Kraken2 reports, cleaned reads, and summary
+├── Etape_3_analyses_post_decontamination/ # FastQC and MultiQC after decontamination
+├── Etape_4_assemblage/                    # contigs and assembly logs
+├── Etape_5_analyses_assemblage/           # QUAST and BUSCO results
+├── Etape_6_alignment_probes_contigs/      # LASTZ probe-matching results
+├── Etape_7_remove_paralogs/               # filtered SAM files and paralogs reports
+├── Etape_8_alignements/                   # flanked sequences, loci, and MAFFT alignments
+├── Etape_9_final_files/                   # UCE summary and Nexus/Phylip output
+└── pipeline_info/                         # Nextflow report, timeline, and trace
 ```
 
 Some directories are only populated when their corresponding steps run (for example, decontamination outputs when `--skip_decontamination true` is not set).
@@ -149,7 +161,7 @@ Some directories are only populated when their corresponding steps run (for exam
 
 ## Resources
 
-As an example, a previous run with 21 shotgun samples and MEGAHIT assembly took about 17 hours 42 minutes and used approximately 500 GB of disk space. The read-file size for that run was approximately 5 GB per FASTQ file. These figures are dataset- and cluster-specific; actual resource requirements may differ substantially.
+As an example, a previous run with 21 shotgun samples, decontamination and MEGAHIT assembly took about 17 hours 42 minutes and used approximately 500 GB of disk space. These figures are dataset- and cluster-specific; actual resource requirements may differ substantially.
 
 ## Learning more
 
