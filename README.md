@@ -1,11 +1,10 @@
 ***
 
-<p style="🚧 This pipeline is still under construction 🚧">Text_content</p>
+<p style="text-align:center;">🚧 This pipeline is still under construction 🚧</p>
 
-<p style="Feel free to try to use anything in here, but I make no promises that it will work as it is supposed to.">Text_content</p>
+<p style="text-align:center;">Feel free to try to use anything in here, but I make no promises that it will work as it is supposed to.</p>
 
-<p style="Without any modifications it will only work on genotoul cluster">Text_content</p>
-
+<p style="text-align:center;">Without any modifications it will only work on genotoul cluster</p>
 
 ***
 
