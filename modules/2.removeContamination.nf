@@ -49,7 +49,7 @@ process CONTAMINATION {
 
 process REMOVE {
 
-    maxForks 4
+    maxForks 3
 
     container 'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/75/752b51b96c1e6b95264be32e9056d30f3d7f0c0e7ad756b269a8854704dc9af9/data'
     // oras://community.wave.seqera.io/library/kraken2_krakentools_bash_gzip_python:0663353035cc296d
@@ -102,9 +102,11 @@ process REMOVE {
     gzip ${sample}.unclassified_2.fq
 
 
+
     ${cleanup} #si on veut garder en cache la partie décontamination et la suite il ne faut pas supprimer le fichier kraken_output
     """
 }
+
 
 
 process CHECK {

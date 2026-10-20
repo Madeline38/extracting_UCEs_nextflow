@@ -48,7 +48,8 @@ process COMBINE_BY_LOCUS {
     path "locus_membership.tsv",         emit: membership
 
     script:
-    def min_n = Math.max(2, Math.ceil(params.min_percent * n_samples / 100.0 - 1e-9) as int)
+    def min_pct = params.min_percent.toString().toDouble()
+    def min_n   = Math.max(2, Math.ceil(min_pct * n_samples / 100.0 - 1e-9) as int)
 
     """
     for f in ${all_fasta}; do
@@ -119,7 +120,6 @@ process UCES_ANALYSIS {
     script:
     """
     #module load tools/Pandoc/3.1.2
-Le préfixe _R_ est ajouté par MAFFT, pas par le convertisseur PHYLIP. Dans le pipeline, MAFFT est lancé avec --adjustdirection, qui lui permet de retourner en complément inverse les séquences orientées à l’opposé. Il marque ces séquences en préfix
     uce_report.py ${locus_counts} ${locus_membership} uce_summary.md ${aligned_fasta}
 
     pandoc uce_summary.md -f markdown -t html -s \\

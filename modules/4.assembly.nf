@@ -12,7 +12,7 @@ process SPADES_ASSEMBLY {
 
     maxForks 2
 
-    container 'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/fe/fed69f1d0cebfa54c4d0500b3415844dce34f36a7fe3e35223bc38b3d38496f5/data'
+    // container 'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/fe/fed69f1d0cebfa54c4d0500b3415844dce34f36a7fe3e35223bc38b3d38496f5/data'
     // oras://community.wave.seqera.io/library/spades_bash_gzip_python:08863429beaea175
 
     input:
@@ -28,16 +28,14 @@ process SPADES_ASSEMBLY {
         'rm -f "$(readlink -f ' + clean_reads[0] + ')" "$(readlink -f ' + clean_reads[1] + ')" || true'
 
     """
-    #module load devel/python/Python-3.12.4
-    #module load bioinfo/SPAdes/4.2.0
+    module load devel/python/Python-3.12.4
+    module load bioinfo/SPAdes/4.2.0
 
     CORRECTION_TIMEOUT=\$((3*3600))
     CHECK_INTERVAL=300
 
     echo "===================================================================="
     echo "Échantillon      : ${sample}"
-    echo "Noeud            : \$(hostname)"
-    echo "Date de début    : \$(date --iso-8601=seconds)"
     echo "===================================================================="
 
     kill_tree() {
@@ -141,8 +139,6 @@ process MEGAHIT_ASSEMBLY {
 
     echo "===================================================================="
     echo "Échantillon : ${sample}"
-    echo "Noeud       : \$(hostname)"
-    echo "Date début  : \$(date --iso-8601=seconds)"
     echo "===================================================================="
 
 
