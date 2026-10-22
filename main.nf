@@ -4,16 +4,16 @@
 // modules
 //========//
 
-include { FASTQC_RUN ; MULTIQC_RUN                                   } from './modules/fastqcBefore.nf'
-include { CONTAMINATION ; REMOVE ; CHECK ; CONTAM_SUMMARY            } from './modules/removeContamination.nf'
-include { FASTQC_RUN_AFTER ; MULTIQC_RUN_AFTER                       } from './modules/fastqcAfter.nf'
-include { SPADES_ASSEMBLY ; MEGAHIT_ASSEMBLY                         } from './modules/assembly.nf'
-include { QUAST ; BUSCO_DOWNLOAD ; BUSCO                             } from './modules/qualityAssembly.nf'
-include { ALIGNMENT_LASTZ                                            } from './modules/matchContigsToProbes.nf'
-include { REMOVE_PARALOGS ; SUMMARY_REMOVE_PARALOGS                  } from './modules/removeParalogs.nf'
-include { EXTRACT_FLANKED ; COMBINE_BY_LOCUS ; MAFFT ; UCES_ANALYSIS } from './modules/multipleAlignement.nf'
-include { TRIMAL                                                     } from './modules/cleaningMSA.nf'
-include { NEXUS_FORMAT ; PHYLIP_FORMAT                               } from './modules/phylogeneticFormat.nf'
+include { FASTQC_RUN ; MULTIQC_RUN                                 		  } from './modules/1.fastqcBefore.nf'
+include { CONTAMINATION ; REMOVE ; CHECK ; CONTAM_SUMMARY          		  } from './modules/2.removeContamination.nf'
+include { FASTQC_RUN_AFTER ; MULTIQC_RUN_AFTER                     		  } from './modules/3.fastqcAfter.nf'
+include { SPADES_ASSEMBLY ; MEGAHIT_ASSEMBLY                        		  } from './modules/4.assembly.nf'
+include { QUAST ; BUSCO_DOWNLOAD ; BUSCO                          	          } from './modules/5.qualityAssembly.nf'
+include { ALIGNMENT_LASTZ                                           		  } from './modules/6.matchContigsToProbes.nf'
+include { REMOVE_PARALOGS ; SUMMARY_REMOVE_PARALOGS                 		  } from './modules/7.removeParalogs.nf'
+include { EXTRACT_FLANKED ; COMBINE_BY_LOCUS ; MAFFT ; FILTER_MSA ; UCES_ANALYSIS } from './modules/8.multipleAlignment.nf'
+include { TRIMAL                                                    		  } from './modules/8.bis.cleaningMSA.nf'
+include { NEXUS_FORMAT ; PHYLIP_FORMAT                             		  } from './modules/9.phylogeneticFormat.nf'
 
 
 
@@ -168,7 +168,6 @@ else  {
             .map { sample, files -> files }
             .flatten()
             .collect(),
-        n_samples_ch
     )
 
     MAFFT(COMBINE_BY_LOCUS.out.combined.flatten())
@@ -179,10 +178,15 @@ else  {
         mafft_ch = TRIMAL.out.trimmed_aligned
     }
 
+    FILTER_MSA(
+        mafft_ch.collect(),
+        n_samples_ch
+    )
+
     UCES_ANALYSIS(
-    COMBINE_BY_LOCUS.out.counts,
-    COMBINE_BY_LOCUS.out.membership,
-    mafft_ch.collect()
+    FILTER_MSA.out.counts,
+    FILTER_MSA.out.membership,
+    FILTER_MSA.out.filtered
     )
 
     // do reformat
@@ -193,12 +197,12 @@ else  {
     }
 
     if (params.phylogenetic_format == 'nexus') {
-        NEXUS_FORMAT (mafft_ch)
+        NEXUS_FORMAT (FILTER_MSA.out.filtered.flatten())
         nexus_ch = NEXUS_FORMAT.out.nexus
         }
           
     else {
-        PHYLIP_FORMAT (mafft_ch)
+        PHYLIP_FORMAT (FILTER_MSA.out.filtered.flatten())
         phylip_ch = PHYLIP_FORMAT.out.phylip
           }
 
@@ -238,11 +242,13 @@ else  {
     report_md                     = SUMMARY_REMOVE_PARALOGS.out.report_md
     report_html                   = SUMMARY_REMOVE_PARALOGS.out.report_html
     flanked_sequences             = EXTRACT_FLANKED.out.sequences
-    locus_combined                = COMBINE_BY_LOCUS.out.combined.flatten()
-    alignments                    = mafft_ch
+    locus_combined                = COMBINE_BY_LOCUS.out.combined
+    alignments_all                = mafft_ch          
+    alignments_filtered           = FILTER_MSA.out.filtered
     uce_summary_html              = UCES_ANALYSIS.out.summary_html
     uce_summary_md                = UCES_ANALYSIS.out.summary_md
-    locus_counts                  = COMBINE_BY_LOCUS.out.counts
+    locus_counts                  = FILTER_MSA.out.counts        
+    locus_membership              = FILTER_MSA.out.membership  
     nexus_files                   = nexus_ch
     phylip_files                  = phylip_ch
 }
@@ -285,12 +291,14 @@ output {
     table_tsv                    {path 'Etape_7_remove_paralogs'}
     report_md                    {path 'Etape_7_remove_paralogs'}
     report_html                  {path 'Etape_7_remove_paralogs'}
-    flanked_sequences            {path 'Etape_8_alignements/flanked'}
-    locus_combined               {path 'Etape_8_alignements/loci'}
-    alignments                   {path 'Etape_8_alignements/mafft'}
+    flanked_sequences            {path 'Etape_8_alignments/flanked'}
+    locus_combined               {path 'Etape_8_alignments/loci'}
+    alignments_all               {path 'Etape_8_alignments/mafft/all'}
+    alignments_filtered          {path 'Etape_8_alignments/mafft/filtered'}
+    locus_membership             {path 'Etape_8_alignments'}
     uce_summary_html             {path 'Etape_9_final_files'}
     uce_summary_md               {path 'Etape_9_final_files'}
-    locus_counts                 {path 'Etape_8_alignements'}
+    locus_counts                 {path 'Etape_8_alignments'}
     nexus_files                  {path 'Etape_9_final_files/nexus'}
     phylip_files                 {path 'Etape_9_final_files/phylip'}
 }
