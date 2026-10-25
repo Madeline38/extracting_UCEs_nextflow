@@ -4,16 +4,16 @@
 // modules
 //========//
 
-include { FASTQC_RUN ; MULTIQC_RUN                                 		  } from './modules/1.fastqcBefore.nf'
-include { CONTAMINATION ; REMOVE ; CHECK ; CONTAM_SUMMARY          		  } from './modules/2.removeContamination.nf'
-include { FASTQC_RUN_AFTER ; MULTIQC_RUN_AFTER                     		  } from './modules/3.fastqcAfter.nf'
-include { SPADES_ASSEMBLY ; MEGAHIT_ASSEMBLY                        		  } from './modules/4.assembly.nf'
-include { QUAST ; BUSCO_DOWNLOAD ; BUSCO                          	          } from './modules/5.qualityAssembly.nf'
-include { ALIGNMENT_LASTZ                                           		  } from './modules/6.matchContigsToProbes.nf'
-include { REMOVE_PARALOGS ; SUMMARY_REMOVE_PARALOGS                 		  } from './modules/7.removeParalogs.nf'
+include { FASTQC_RUN ; MULTIQC_RUN                                 		          } from './modules/1.fastqcBefore.nf'
+include { CONTAMINATION ; REMOVE ; CHECK ; CONTAM_SUMMARY          		          } from './modules/2.removeContamination.nf'
+include { FASTQC_RUN_AFTER ; MULTIQC_RUN_AFTER                     		          } from './modules/3.fastqcAfter.nf'
+include { SPADES_ASSEMBLY ; MEGAHIT_ASSEMBLY                        		      } from './modules/4.assembly.nf'
+include { QUAST ; BUSCO_DOWNLOAD ; BUSCO                          	              } from './modules/5.qualityAssembly.nf'
+include { ALIGNMENT_LASTZ                                           		      } from './modules/6.matchContigsToProbes.nf'
+include { REMOVE_PARALOGS ; SUMMARY_REMOVE_PARALOGS                 		      } from './modules/7.removeParalogs.nf'
 include { EXTRACT_FLANKED ; COMBINE_BY_LOCUS ; MAFFT ; FILTER_MSA ; UCES_ANALYSIS } from './modules/8.multipleAlignment.nf'
-include { TRIMAL                                                    		  } from './modules/8.bis.cleaningMSA.nf'
-include { NEXUS_FORMAT ; PHYLIP_FORMAT                             		  } from './modules/9.phylogeneticFormat.nf'
+include { TRIMAL                                                    	   	      } from './modules/8.bis.cleaningMSA.nf'
+include { NEXUS_FORMAT ; PHYLIP_FORMAT                             		          } from './modules/9.phylogeneticFormat.nf'
 
 
 
