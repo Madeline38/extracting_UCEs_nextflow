@@ -5,7 +5,7 @@
 //========//
 
 include { FASTQC ; MULTIQC                                 		                      } from './modules/1.qualityControl.nf'
-include { CHECK ; REMOVE ; RE_CHECK ; SUMMARY_DECONTAMINATION          		          } from './modules/2.removeContamination.nf'
+include { CHECK ; REMOVE ; SUMMARY_DECONTAMINATION          	        	          } from './modules/2.removeContamination.nf'
 include { FASTQC_AFTER ; MULTIQC_AFTER                     		                      } from './modules/3.qualityControlAfter.nf'
 include { ASSEMBLY_SPADES ; ASSEMBLY_MEGAHIT                        		          } from './modules/4.assembly.nf'
 include { QUAST ; BUSCO_DOWNLOAD ; BUSCO                          	                  } from './modules/5.qualityAssembly.nf'
@@ -95,14 +95,10 @@ if ( !params.skip_assembly ) {
             REMOVE(reads_ch.join(CHECK.out.results))
             reads_clean_ch = REMOVE.out.clean_reads
 
-            // check where are the contamination after the decontamination step => remove this step in the future
-            RE_CHECK (reads_clean_ch)
-
             // summary of the decontamination process
             SUMMARY_DECONTAMINATION(
                 CHECK.out.stats.collect(),
                 REMOVE.out.stats.collect(),
-                RE_CHECK.out.stats.collect()
             )
 
 
@@ -116,8 +112,6 @@ if ( !params.skip_assembly ) {
             contam_stats_ch         = CHECK.out.stats
             clean_reads_pub_ch      = REMOVE.out.clean_reads
             decontam_stats_ch       = REMOVE.out.stats
-            contam_report_after_ch  = RE_CHECK.out.report
-            contam_stats_after_ch   = RE_CHECK.out.stats
             contam_summary_table_ch = SUMMARY_DECONTAMINATION.out.table
             contam_summary_full_ch  = SUMMARY_DECONTAMINATION.out.report
             contam_summary_html_ch  = SUMMARY_DECONTAMINATION.out.report_html
@@ -237,8 +231,6 @@ else  {
     report_contamination_before   = contam_report_before_ch
     info_contamination            = contam_stats_ch
     info_decontamination          = decontam_stats_ch
-    report_contamination_after    = contam_report_after_ch
-    info_contamination_after      = contam_stats_after_ch
     summary_decontamination       = contam_summary_table_ch
     summary_decontamination_full  = contam_summary_full_ch
     summary_decontamination_html  = contam_summary_html_ch
@@ -287,8 +279,6 @@ output {
     report_contamination_before  {path 'Etape_2_decontamination/contamination'}
     info_contamination           {path 'Etape_2_decontamination/contamination/stats'}
     info_decontamination         {path 'Etape_2_decontamination/new_reads/stats'}
-    report_contamination_after   {path 'Etape_2_decontamination/contamination_after'}
-    info_contamination_after     {path 'Etape_2_decontamination/contamination_after/stats'}
     summary_decontamination      {path 'Etape_2_decontamination'}
     summary_decontamination_full {path 'Etape_2_decontamination'}
     summary_decontamination_html {path 'Etape_2_decontamination'}

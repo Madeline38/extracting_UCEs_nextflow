@@ -109,50 +109,6 @@ process REMOVE {
 
 
 
-process RE_CHECK {
-
-    maxForks 2
-
-    container 'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/e0/e0ac1be3c45d53e5a1ed60a8cce72cd9832ce204bb44b0e908654866b712bdc9/data'
-    // oras://community.wave.seqera.io/library/kraken2_bash_gzip_python:87f879546f2641d8
-
-    input:
-    tuple val(sample), path(clean_reads)
-
-    output:
-    path "${sample}_clean_kraken_report.txt", emit: report
-    path "${sample}_decontam.tsv", emit: stats
-
-    script:
-    """
-    #module load bioinfo/Kraken2/2.17.1
-    
-    kraken2 --db ${params.kraken_db} \\
-            --paired ${clean_reads} \\
-            --threads ${task.cpus} \\
-            --report "${sample}_clean_kraken_report.txt" \\
-            --output "${sample}_clean_kraken_output.txt"
-
-    
-    rm -rf ${sample}_clean_kraken_output.txt
-
-    human_pct=\$(awk -F'\\t' '\$5 == 9606 {print \$1}' ${sample}_clean_kraken_report.txt | tr -d ' ')
-    human_pct=\${human_pct:-0}
-
-    if awk -v h="\$human_pct" 'BEGIN {exit !(h > 0)}'; then
-        echo "Contamination wasn't well removed" >&2
-    fi
-
-    bacteria_pct=\$(awk -F'\\t' '\$5 == 2 {print \$1}' ${sample}_clean_kraken_report.txt | tr -d ' ')
-    bacteria_pct=\${bacteria_pct:-0}
-
-    # potentiel problème si d'autres taxons ont un 2 dans leur ID, mais à voir
-
-    printf "%s\\t%s\\t%s\\n" "${sample}" "\$human_pct" "\$bacteria_pct" > ${sample}_decontam.tsv
-    """
-}
-
-
 process SUMMARY_DECONTAMINATION {
 
     container 'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/dc/dcba98ee6037ee71e2852483e0d2fd6275db255218b3425446b5788d30ef8362/data'
@@ -161,7 +117,6 @@ process SUMMARY_DECONTAMINATION {
     input:
     path before_stats
     path removed_stats
-    path after_stats
 
     output:
     path "contamination_summary.tsv", emit: table
@@ -177,11 +132,6 @@ process SUMMARY_DECONTAMINATION {
 
     echo -e "sample\\treads_before\\treads_after\\treads_removed\\tpct_removed" > removed.tsv
     cat ${removed_stats} >> removed.tsv
-
-    echo -e "sample\\thuman_pct\\tbacteria_pct" > after.tsv
-    cat ${after_stats} >> after.tsv
-
-
 
     join -t \$'\\t' \\
         <(tail -n +2 before.tsv | sort) \\
