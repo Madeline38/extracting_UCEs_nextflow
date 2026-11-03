@@ -58,7 +58,7 @@ process BUSCO {
     path busco_downloads
 
     output:
-    tuple val(sample), path("busco_${sample}/short_summary.specific.${params.busco_db}.busco_${sample}_${params.type_assembly}.txt"),     emit: summary_txt
+    tuple val(sample), path("busco_${sample}/short_summary.specific.*.txt"),     emit: summary_txt
     tuple val(sample), path("busco_${sample}/run_${params.busco_db}/full_table.tsv"),                                                     emit: full_table_tsv
     tuple val(sample), path("busco_${sample}/busco_figure.png"),                                                                          emit: plot
     
