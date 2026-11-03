@@ -9,7 +9,7 @@
 
 //===========================================================================================================
 
-process CONTAMINATION {
+process CHECK {
 
     maxForks 2
 
@@ -109,7 +109,7 @@ process REMOVE {
 
 
 
-process CHECK {
+process RE_CHECK {
 
     maxForks 2
 
@@ -153,7 +153,7 @@ process CHECK {
 }
 
 
-process CONTAM_SUMMARY {
+process SUMMARY_DECONTAMINATION {
 
     container 'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/dc/dcba98ee6037ee71e2852483e0d2fd6275db255218b3425446b5788d30ef8362/data'
     // oras://community.wave.seqera.io/library/bash_gzip_pandoc_python:12ff9a2d0fc88bf2

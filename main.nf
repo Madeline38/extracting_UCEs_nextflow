@@ -4,16 +4,16 @@
 // modules
 //========//
 
-include { FASTQC_RUN ; MULTIQC_RUN                                 		          } from './modules/1.fastqcBefore.nf'
-include { CONTAMINATION ; REMOVE ; CHECK ; CONTAM_SUMMARY          		          } from './modules/2.removeContamination.nf'
-include { FASTQC_RUN_AFTER ; MULTIQC_RUN_AFTER                     		          } from './modules/3.fastqcAfter.nf'
-include { SPADES_ASSEMBLY ; MEGAHIT_ASSEMBLY                        		      } from './modules/4.assembly.nf'
-include { QUAST ; BUSCO_DOWNLOAD ; BUSCO                          	              } from './modules/5.qualityAssembly.nf'
-include { ALIGNMENT_LASTZ                                           		      } from './modules/6.matchContigsToProbes.nf'
-include { REMOVE_PARALOGS ; SUMMARY_REMOVE_PARALOGS                 		      } from './modules/7.removeParalogs.nf'
-include { EXTRACT_FLANKED ; COMBINE_BY_LOCUS ; MAFFT ; FILTER_MSA ; UCES_ANALYSIS } from './modules/8.multipleAlignment.nf'
-include { TRIMAL                                                    	   	      } from './modules/8.bis.cleaningMSA.nf'
-include { NEXUS_FORMAT ; PHYLIP_FORMAT                             		          } from './modules/9.phylogeneticFormat.nf'
+include { FASTQC ; MULTIQC                                 		                      } from './modules/1.qualityControl.nf'
+include { CHECK ; REMOVE ; RE_CHECK ; SUMMARY_DECONTAMINATION          		          } from './modules/2.removeContamination.nf'
+include { FASTQC_AFTER ; MULTIQC_AFTER                     		                      } from './modules/3.qualityControlAfter.nf'
+include { ASSEMBLY_SPADES ; ASSEMBLY_MEGAHIT                        		          } from './modules/4.assembly.nf'
+include { QUAST ; BUSCO_DOWNLOAD ; BUSCO                          	                  } from './modules/5.qualityAssembly.nf'
+include { ALIGNMENT_LASTZ                                           		          } from './modules/6.matchContigsToProbes.nf'
+include { REMOVE_PARALOGS ; SUMMARY_REMOVE_PARALOGS                 		          } from './modules/7.removeParalogs.nf'
+include { EXTRACT_FLANKED ; COMBINE_BY_LOCUS ; MSA_MAFFT ; FILTER_MSA ; SUMMARY_MSA   } from './modules/8.multipleSequenceAlignment.nf'
+include { TRIMAL                                                    	   	          } from './modules/8.bis.trimmingMSA.nf'
+include { NEXUS_FORMAT ; PHYLIP_FORMAT                             		              } from './modules/9.phylogeneticFormat.nf'
 
 
 
@@ -25,18 +25,23 @@ workflow {
     
     main:
 
+// check if parameters are correct
 if ( !params.probes )
     error "Missing obligatory parameter : try again with --probes <name_probes.fasta>"
+
 if ( !(params.probes ==~ /.*\.(fasta|fa)$/) )
     error "Your probe file is not a fasta file, please use the format <name_probes_file.fasta>"
 probes_file = file(params.probes, checkIfExists: true)
 
+
+// convert min_percent to float and check if it is between 0 and 100
 def min_percent = params.min_percent.toString().toFloat()
 
 if ( min_percent < 0 || min_percent > 100 )
     error "--min_percent doit être compris entre 0 et 100"
 
-// canaux par défaut (vides) pour les étapes pouvant être sautées
+
+// empty channel by default for skipping processes
 def fastqc_before_ch        = channel.empty()
 def multiqc_before_ch       = channel.empty()
 def contam_report_before_ch = channel.empty()
@@ -58,110 +63,127 @@ def phylip_ch               = channel.empty()
 def mafft_ch                = channel.empty()
 
 
-
-
+// skip_assembly is false (by default)
 if ( !params.skip_assembly ) {
 
+    // check if reads parameter is provided
     if( !params.reads )
         error "Missing obligatory parameter : try again with --reads <directory_with_fastq.gz>"
 
-    // create a channel for inputs from fastq.gz file
+    // create a channel for inputs from fastq.gz files (reads)
     reads_ch = channel.fromFilePairs(
-        "${params.reads}/*{1,2}.f*q.gz",
-        checkIfExists: true //check if there is pairs to avoid running empty channel
+        "${params.reads}/*{1,2}.f*q.gz", // reads files have to be named something like sample_1.fastq.gz and sample_2.fastq.gz / don't use "-" in the name
+        checkIfExists: true              // check if there is pairs to avoid running empty channel
         )
         .view()
 
-    // do check data quality with fastqc
-    FASTQC_RUN(reads_ch)
-    MULTIQC_RUN(FASTQC_RUN.out.report.collect())
-    fastqc_before_ch  = FASTQC_RUN.out.report
-    multiqc_before_ch = MULTIQC_RUN.out.report
+    // 1. check data quality with fastqc and multiqc and collect the reports
+    FASTQC(reads_ch)
+    MULTIQC(FASTQC.out.report.collect())
+    fastqc_before_ch  = FASTQC.out.report
+    multiqc_before_ch = MULTIQC.out.report
 
-    reads_clean_ch = reads_ch
+    reads_clean_ch = reads_ch   // if skip_decontamination is true, reads_clean_ch will be the same as reads_ch
 
+        // 2. decontamination step if skip_decontamination is false (by default)
         if ( !params.skip_decontamination ) {
             
-            // decontaminate the reads from human contamination
-            CONTAMINATION(reads_ch)
+            // check where are the contamination 
+            CHECK(reads_ch)
 
-            REMOVE(reads_ch.join(CONTAMINATION.out.results))
+            // decontaminate the reads from human contamination
+            REMOVE(reads_ch.join(CHECK.out.results))
             reads_clean_ch = REMOVE.out.clean_reads
 
-            CHECK (reads_clean_ch)
+            // check where are the contamination after the decontamination step => remove this step in the future
+            RE_CHECK (reads_clean_ch)
 
-            CONTAM_SUMMARY(
-                CONTAMINATION.out.stats.collect(),
+            // summary of the decontamination process
+            SUMMARY_DECONTAMINATION(
+                CHECK.out.stats.collect(),
                 REMOVE.out.stats.collect(),
-                CHECK.out.stats.collect()
+                RE_CHECK.out.stats.collect()
             )
 
 
-            // do check data quality with fastqc again
-            FASTQC_RUN_AFTER(reads_clean_ch)
-            MULTIQC_RUN_AFTER(FASTQC_RUN_AFTER.out.report.collect())
+            // 3. check data quality with fastqc and multiqc with the cleaned reads and collect the reports (only if decontamination step is true)
+            FASTQC_AFTER(reads_clean_ch)
+            MULTIQC_AFTER(FASTQC_AFTER.out.report.collect())
 
-            contam_report_before_ch = CONTAMINATION.out.results.map { sample, report, output -> tuple(sample, report) }
-            contam_reads_before_ch  = CONTAMINATION.out.results.map { sample, report, output -> tuple(sample, output) }
-            contam_stats_ch         = CONTAMINATION.out.stats
+            // publish the channels for output
+            contam_report_before_ch = CHECK.out.results.map { sample, report, output -> tuple(sample, report) }
+            contam_reads_before_ch  = CHECK.out.results.map { sample, report, output -> tuple(sample, output) }
+            contam_stats_ch         = CHECK.out.stats
             clean_reads_pub_ch      = REMOVE.out.clean_reads
             decontam_stats_ch       = REMOVE.out.stats
-            contam_report_after_ch  = CHECK.out.report
-            contam_stats_after_ch   = CHECK.out.stats
-            contam_summary_table_ch = CONTAM_SUMMARY.out.table
-            contam_summary_full_ch  = CONTAM_SUMMARY.out.report
-            contam_summary_html_ch  = CONTAM_SUMMARY.out.report_html
-            fastqc_after_ch         = FASTQC_RUN_AFTER.out.report
-            multiqc_after_ch        = MULTIQC_RUN_AFTER.out.report
+            contam_report_after_ch  = RE_CHECK.out.report
+            contam_stats_after_ch   = RE_CHECK.out.stats
+            contam_summary_table_ch = SUMMARY_DECONTAMINATION.out.table
+            contam_summary_full_ch  = SUMMARY_DECONTAMINATION.out.report
+            contam_summary_html_ch  = SUMMARY_DECONTAMINATION.out.report_html
+            fastqc_after_ch         = FASTQC_AFTER.out.report
+            multiqc_after_ch        = MULTIQC_AFTER.out.report
 
         }
 
 
-    // do assembly
+    // 4. assembly step
 
-    def valid_assembly = ['spades', 'megahit']
+    // check if the parameter type_assembly is valid
+    def valid_assembly = ['spades', 'megahit'] 
     if ( !valid_assembly.contains(params.type_assembly) ) {
         error "Unrecognised type_assembly: '${params.type_assembly}'. Options: ${valid_assembly.join(', ')}"
     }
 
+    // spades
     if (params.type_assembly == 'spades') {
-        SPADES_ASSEMBLY(reads_clean_ch)
-        contigs_ch = SPADES_ASSEMBLY.out.contigs
-        logs_ch = SPADES_ASSEMBLY.out.logs
+        ASSEMBLY_SPADES(reads_clean_ch)
+        contigs_ch = ASSEMBLY_SPADES.out.contigs
+        logs_ch = ASSEMBLY_SPADES.out.logs
         }
-          
+
+    // megahit
     else {
-        MEGAHIT_ASSEMBLY(reads_clean_ch)
-        contigs_ch = MEGAHIT_ASSEMBLY.out.contigs
-        logs_ch = MEGAHIT_ASSEMBLY.out.logs
+        ASSEMBLY_MEGAHIT(reads_clean_ch)
+        contigs_ch = ASSEMBLY_MEGAHIT.out.contigs
+        logs_ch = ASSEMBLY_MEGAHIT.out.logs
           }
   }
 
+
+// if skip_assembly is true
 else  {
+
+    // check if the contigs parameter is provided
     if ( !params.contigs )
         error "Missing obligatory parameter : try again with --contigs <directory_with_contigs>"
+
+    // create a channel for inputs from contigs files
     contigs_ch = channel
-        .fromPath("${params.contigs}/*.fasta", checkIfExists: true)
-        .map { f -> tuple(f.simpleName, f) }
+        .fromPath("${params.contigs}/*.fasta", // contigs files have to be named something like sample.fasta
+        checkIfExists: true 
+        ) 
+        .map { f -> tuple(f.simpleName, f) } // create a tuple with the sample name and the path to the contigs file
 }
 
-    // do analysis of the assembly
-    QUAST(contigs_ch)
-    BUSCO_DOWNLOAD()
-    BUSCO(contigs_ch, BUSCO_DOWNLOAD.out.db.first())
+    // 5. quality assembly step
+    QUAST(contigs_ch) // analyse metrics of the assembly (N50, L50...)
+    BUSCO_DOWNLOAD() // download the busco database (genes of hymenoptera_odb12 database by default)
+    BUSCO(contigs_ch, BUSCO_DOWNLOAD.out.db.first()) // analyse the completeness of the assembly with busco
 
 
-    // do alignment contigs with probes
+    // 6. do alignment contigs with probes (reference loci)
     ALIGNMENT_LASTZ (contigs_ch, probes_file)
 
-    // do UCEs extraction
+    // 7. remove paralogs
     REMOVE_PARALOGS(ALIGNMENT_LASTZ.out.lastz_results)
+    n_samples_ch = REMOVE_PARALOGS.out.clean.count() // count the number of samples to use it in the FILTER_MSA process
+
     SUMMARY_REMOVE_PARALOGS(REMOVE_PARALOGS.out.stats.map { sample, path -> path }.collect())
 
-    // do multiple alignment
+    // 8. do multiple sequence alignment with the cleaned sam files and the loci to keep
     EXTRACT_FLANKED(REMOVE_PARALOGS.out.clean)
 
-    n_samples_ch = REMOVE_PARALOGS.out.clean.count()
 
     COMBINE_BY_LOCUS(
         EXTRACT_FLANKED.out.sequences
@@ -170,8 +192,8 @@ else  {
             .collect(),
     )
 
-    MAFFT(COMBINE_BY_LOCUS.out.combined.flatten())
-    mafft_ch = MAFFT.out.aligned
+    MSA_MAFFT(COMBINE_BY_LOCUS.out.combined.flatten())
+    mafft_ch = MSA_MAFFT.out.aligned
 
     if ( params.trimming == 'trimal' ) {
         TRIMAL(mafft_ch)
@@ -183,7 +205,7 @@ else  {
         n_samples_ch
     )
 
-    UCES_ANALYSIS(
+    SUMMARY_MSA(
     FILTER_MSA.out.counts,
     FILTER_MSA.out.membership,
     FILTER_MSA.out.filtered
@@ -245,8 +267,8 @@ else  {
     locus_combined                = COMBINE_BY_LOCUS.out.combined
     alignments_all                = mafft_ch          
     alignments_filtered           = FILTER_MSA.out.filtered
-    uce_summary_html              = UCES_ANALYSIS.out.summary_html
-    uce_summary_md                = UCES_ANALYSIS.out.summary_md
+    uce_summary_html              = SUMMARY_MSA.out.summary_html
+    uce_summary_md                = SUMMARY_MSA.out.summary_md
     locus_counts                  = FILTER_MSA.out.counts        
     locus_membership              = FILTER_MSA.out.membership  
     nexus_files                   = nexus_ch
@@ -262,8 +284,8 @@ else  {
 output {
     fastqc_before                {path 'Etape_1_analyses/fastqc'}
     multiqc_before               {path 'Etape_1_analyses/multiqc'}
-    report_contamination_before  {path 'Etape_2_decontamination/contamination_before'}
-    info_contamination           {path 'Etape_2_decontamination/contamination_before/stats'}
+    report_contamination_before  {path 'Etape_2_decontamination/contamination'}
+    info_contamination           {path 'Etape_2_decontamination/contamination/stats'}
     info_decontamination         {path 'Etape_2_decontamination/new_reads/stats'}
     report_contamination_after   {path 'Etape_2_decontamination/contamination_after'}
     info_contamination_after     {path 'Etape_2_decontamination/contamination_after/stats'}

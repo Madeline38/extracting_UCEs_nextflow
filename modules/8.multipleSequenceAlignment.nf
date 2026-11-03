@@ -62,7 +62,7 @@ process COMBINE_BY_LOCUS {
     """
 }
 
-process MAFFT {
+process MSA_MAFFT {
 
     maxForks 100
 
@@ -123,7 +123,7 @@ process FILTER_MSA {
     """
 }
 
-process UCES_ANALYSIS {
+process SUMMARY_MSA {
 
     container 'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/dc/dcba98ee6037ee71e2852483e0d2fd6275db255218b3425446b5788d30ef8362/data'
     // oras://community.wave.seqera.io/library/bash_gzip_pandoc_python:12ff9a2d0fc88bf2

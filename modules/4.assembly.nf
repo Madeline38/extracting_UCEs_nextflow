@@ -8,7 +8,7 @@
 
 //===========================================================================================================
 
-process SPADES_ASSEMBLY {
+process ASSEMBLY_SPADES {
 
     maxForks 2
 
@@ -113,7 +113,7 @@ process SPADES_ASSEMBLY {
 }
 
 
-process MEGAHIT_ASSEMBLY {
+process ASSEMBLY_MEGAHIT {
 
     maxForks 3
 
