@@ -17,19 +17,19 @@ French national project funded by *PEPR Dynamiques de la Biodiversité Terrestre
 
 {name_pipeline} is a bioinformatics pipeline that can be used to extract **Ultra-Conserved Elements (UCEs)** from DNA sequencing reads in order to build a phylogenetic tree.
 
-## Pipeline steps (`modules/')
+## Pipeline steps (`modules/`)
 
-| Step | Process name | Tools | Description |
+| Step | Step name | Tools | Description |
 |---|---|---|---|
-| 1 | `fastqcBefore` | [Fastqc](https://github.com/s-andrews/fastqc) & [multiqc](https://github.com/multiqc/multiqc) | Assess read quality before decontamination (read-input mode only). |
-| 2 | `removeContamination` | Kraken2 | Identify and remove human-classified reads; skipped with `--skip_decontamination true`. |
-| 3 | `fastqcAfter` | [Fastqc](https://github.com/s-andrews/fastqc) & [multiqc](https://github.com/multiqc/multiqc) | Assess read quality after decontamination (when decontamination is enabled). |
-| 4 | `assembly` | [MEGAHIT](https://github.com/voutcn/MEGAHIT) or [SPAdes](https://github.com/ablab/spades) | Assemble paired reads into contigs, unless existing contigs are supplied with `--skip_assembly true`. |
-| 5 | `qualityAssembly` | [QUAST](https://github.com/ablab/quast) & [BUSCO](https://busco.ezlab.org/) | Evaluate assembly statistics and completeness of the contigs. |
-| 6 | `matchContigsToProbes` | LASTZ | Align contigs against the supplied UCE probe FASTA. |
-| 7 | `removeParalogs` | Paralogue filtering script | Exclude loci with ambiguous or multiple contig-to-locus matches. |
-| 8 | `multipleAlignment` | Flank extraction, locus filtering, [MAFFT](https://github.com/GSLBiotech/mafft) | Extract flanked sequences, retain loci meeting `min_percent`, align them by locus, and produce the UCE summary report. TrimAl can optionally trim alignments. |
-| 9 | `phylogeneticFormat` | Biopython package | Convert alignments to Nexus or Phylip. |
+| 1 | Quality Control (before decontamination) | [FastQC](https://github.com/s-andrews/fastqc) & [MultiQC](https://github.com/multiqc/multiqc) | Assess read quality before decontamination (read-input mode only). |
+| 2 | Decontamination | Kraken2 | Identify and remove human-classified reads; skipped with `--skip_decontamination true`. |
+| 3 | Quality Control (after decontamination) | [FastQC](https://github.com/s-andrews/fastqc) & [MultiQC](https://github.com/multiqc/multiqc) | Assess read quality after decontamination (when decontamination is enabled). |
+| 4 | Assembly | [MEGAHIT](https://github.com/voutcn/MEGAHIT) or [SPAdes](https://github.com/ablab/spades) | Assemble paired reads into contigs, unless existing contigs are supplied with `--skip_assembly true`. |
+| 5 | Assembly Quality Assessment | [QUAST](https://github.com/ablab/quast) & [BUSCO](https://busco.ezlab.org/) | Evaluate assembly statistics and completeness of the contigs. |
+| 6 | Contig-to-Probe Alignment | LASTZ | Align contigs against the supplied UCE probe FASTA. |
+| 7 | Paralogs Removal | awk script | Exclude loci with ambiguous or multiple contig-to-locus matches. |
+| 8 | Multiple Sequence Alignment | Python script, awk script, [MAFFT](https://github.com/GSLBiotech/mafft) | Extract flanked sequences, retain loci meeting `min_percent`, align them by locus, and produce the UCE summary report. TrimAl can optionally trim alignments. |
+| 9 | Phylogenetic Format Conversion | Biopython package | Convert alignments to Nexus or Phylip. |
 
 Outputs are published under the `outdir` directory (default: `results/`; see [Outputs](#outputs)).
 
@@ -143,7 +143,7 @@ results/
 ├── Etape_5_analyses_assemblage/           # QUAST and BUSCO results
 ├── Etape_6_alignment_probes_contigs/      # LASTZ probe-matching results
 ├── Etape_7_remove_paralogs/               # filtered SAM files and paralogs reports
-├── Etape_8_alignements/                   # flanked sequences, loci, and MAFFT alignments
+├── Etape_8_alignments/                   # flanked sequences, loci, and MAFFT alignments
 ├── Etape_9_final_files/                   # UCE summary and Nexus/Phylip output
 └── pipeline_info/                         # Nextflow report, timeline, and trace
 ```
