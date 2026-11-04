@@ -28,7 +28,7 @@ French national project funded by *PEPR Dynamiques de la Biodiversité Terrestre
 | 5 | Assembly Quality Assessment | [QUAST](https://github.com/ablab/quast) & [BUSCO](https://busco.ezlab.org/) | Evaluate assembly statistics and completeness of the contigs. |
 | 6 | Contig-to-Probe Alignment | LASTZ | Align contigs against the supplied UCE probe FASTA. |
 | 7 | Paralogs Removal | awk script | Exclude loci with ambiguous or multiple contig-to-locus matches. |
-| 8 | Multiple Sequence Alignment | Python script, awk script, [MAFFT](https://github.com/GSLBiotech/mafft) | Extract flanked sequences, retain loci meeting `min_percent`, align them by locus, and produce the UCE summary report. TrimAl can optionally trim alignments. |
+| 8 | Multiple Sequence Alignment | Python script, awk script, [MAFFT](https://github.com/GSLBiotech/mafft) | Extract flanked sequences, align them by locus, and produce the UCE summary report. Trimming MSA option are optional. |
 | 9 | Phylogenetic Format Conversion | Biopython package | Convert alignments to Nexus or Phylip. |
 
 Outputs are published under the `outdir` directory (default: `results/`; see [Outputs](#outputs)).
@@ -94,11 +94,11 @@ nextflow run main.nf --reads [raw_data] --probes [probes_file] [OPTION]
 | `busco_db` | `hymenoptera_odb12` | BUSCO lineage database used to assess assembly completeness. |
 | `probes` | `none` | FASTA file of UCE probes. Required in both execution modes. |
 | `flank` | `160` | Number of bases to extract on each side of a matched UCE. |
-| `min_percent` | `75` | Minimum percentage of samples in which a locus must be present to retain it (0–100). At least two samples are required for a locus to be retained. |
-| `trimming` | `none` | Optional alignment trimming. Use `trimal` to enable TrimAl; default is no trimming. |
+| `min_percent` | `0` | Minimum percentage of samples in which a locus must be present to retain it (0–100). At least two samples are required for a locus to be retained. |
+| `trimming` | `none` | Optional alignment trimming. clipKIT, bmge and trimAl are available; default is no trimming. |
+| `mode_clipkit` | `kpic` | If you use clipkit you can chose the option you want; default is kpic. |
 | `phylogenetic_format` | `phylip` | Output alignment format: `nexus` or `phylip`. |
 | `outdir` | `results` | Output directory for published files and pipeline reports. |
-
 
 
 Parameters can be overridden on the command line. For paired reads (the default mode):
@@ -154,7 +154,7 @@ Some directories are only populated when their corresponding steps run (for exam
 
 - The number of reads removed during decontamination depends on the Kraken2 database and the samples.
 - SPAdes took substantially longer than MEGAHIT. Runtime and assembly quality depend on the dataset and available resources; benchmark both assemblers for your data if needed.
-- Alignment trimming is optional (`--trimming trimal`). Compare trimmed and untrimmed alignments to decide whether trimming is appropriate for your data.
+- Alignment trimming is optional (`--trimming clipkit`). Compare trimmed and untrimmed alignments to decide whether trimming is appropriate for your data.
 - Nextflow can reuse cached tasks with `-resume` when task inputs and outputs are available. The decontamination process removes its Kraken2 output file after read extraction, so this intermediate file is not retained. Keeping it would require modifying the decontamination process and would consume additional disk space.
 
 ## Resources
