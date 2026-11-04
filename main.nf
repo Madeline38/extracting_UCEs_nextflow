@@ -11,8 +11,8 @@ include { ASSEMBLY_SPADES ; ASSEMBLY_MEGAHIT                        		          
 include { QUAST ; BUSCO_DOWNLOAD ; BUSCO                          	                  } from './modules/5.qualityAssembly.nf'
 include { ALIGNMENT_LASTZ                                           		          } from './modules/6.matchContigsToProbes.nf'
 include { REMOVE_PARALOGS ; SUMMARY_REMOVE_PARALOGS                 		          } from './modules/7.removeParalogs.nf'
-include { EXTRACT_FLANKED ; COMBINE_BY_LOCUS ; MSA_MAFFT ; FILTER_MSA ; SUMMARY_MSA   } from './modules/8.multipleSequenceAlignment.nf'
-include { TRIMAL                                                    	   	          } from './modules/8.bis.trimmingMSA.nf'
+include { EXTRACT_FLANKED ; COMBINE_BY_LOCUS ; MSA_MAFFT ; SUMMARY_MSA   } from './modules/8.multipleSequenceAlignment.nf'
+include { CLIPKIT ; FILTER_MSA ; BMGE ; TRIMAL                                                   	   	          } from './modules/8.bis.trimmingMSA.nf'
 include { NEXUS_FORMAT ; PHYLIP_FORMAT                             		              } from './modules/9.phylogeneticFormat.nf'
 
 
@@ -49,8 +49,6 @@ def contam_reads_before_ch  = channel.empty()
 def contam_stats_ch         = channel.empty()
 def clean_reads_pub_ch      = channel.empty()
 def decontam_stats_ch       = channel.empty()
-def contam_report_after_ch  = channel.empty()
-def contam_stats_after_ch   = channel.empty()
 def contam_summary_table_ch = channel.empty()
 def contam_summary_full_ch  = channel.empty()
 def contam_summary_html_ch  = channel.empty()
@@ -61,6 +59,8 @@ def contigs_ch              = channel.empty()
 def nexus_ch                = channel.empty()
 def phylip_ch               = channel.empty()
 def mafft_ch                = channel.empty()
+def mafft_filtered_ch       = channel.empty()
+def mafft_trimmed_ch        = channel.empty()
 
 
 // skip_assembly is false (by default)
@@ -189,21 +189,42 @@ else  {
     MSA_MAFFT(COMBINE_BY_LOCUS.out.combined.flatten())
     mafft_ch = MSA_MAFFT.out.aligned
 
-    if ( params.trimming == 'trimal' ) {
-        TRIMAL(mafft_ch)
-        mafft_ch = TRIMAL.out.trimmed_aligned
+
+// differents possibility of trimming the MSA(clipkit, trimal, bmge) or no trimming at all
+    msa_ch = mafft_ch   //canal de travail
+    
+    if ( params.trimming == 'clipkit' ) {
+        CLIPKIT(mafft_ch)
+        mafft_trimmed_ch = CLIPKIT.out.clipkit_aligned
     }
 
-    FILTER_MSA(
-        mafft_ch.collect(),
-        n_samples_ch
-    )
+    else if ( params.trimming == 'bmge' ) {
+        BMGE(mafft_ch)
+        mafft_trimmed_ch = BMGE.out.bmge_aligned
+    }
 
-    SUMMARY_MSA(
+    else if ( params.trimming == 'trimal' ) {
+        TRIMAL(mafft_ch)
+        mafft_trimmed_ch = TRIMAL.out.trimmed_aligned
+    }
+
+// si un trimming a eu lieu, on filtre les alignements trimmés
+if ( params.trimming != 'none' ) {
+    msa_ch = alignments_trimmed_ch
+}
+
+// par défault le filtre est à 0% donc on garde tous les locus, mais on peut changer le paramètre min_percent pour filtrer les locus avec moins de n% d'échantillons   
+FILTER_MSA(mafft_ch.collect(), n_samples_ch)
+    msa_ch = FILTER_MSA.out.filtered
+
+
+SUMMARY_MSA(
     FILTER_MSA.out.counts,
     FILTER_MSA.out.membership,
-    FILTER_MSA.out.filtered
+    FILTER_MSA.out.filtered.collect()
     )
+
+
 
     // do reformat
 
@@ -258,7 +279,8 @@ else  {
     flanked_sequences             = EXTRACT_FLANKED.out.sequences
     locus_combined                = COMBINE_BY_LOCUS.out.combined
     alignments_all                = mafft_ch          
-    alignments_filtered           = FILTER_MSA.out.filtered
+    alignments_filtered           = mafft_filtered_ch
+    alignments_trimmed            = mafft_trimmed_ch
     uce_summary_html              = SUMMARY_MSA.out.summary_html
     uce_summary_md                = SUMMARY_MSA.out.summary_md
     locus_counts                  = FILTER_MSA.out.counts        
@@ -307,6 +329,7 @@ output {
     locus_combined               {path 'Etape_8_alignments/loci'}
     alignments_all               {path 'Etape_8_alignments/mafft/all'}
     alignments_filtered          {path 'Etape_8_alignments/mafft/filtered'}
+    alignments_trimmed           {path 'Etape_8_alignments/mafft/trimmed'}
     locus_membership             {path 'Etape_8_alignments'}
     uce_summary_html             {path 'Etape_9_final_files'}
     uce_summary_md               {path 'Etape_9_final_files'}
