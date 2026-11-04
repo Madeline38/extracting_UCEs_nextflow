@@ -108,3 +108,42 @@ process SUMMARY_MSA {
     """
 }
 
+
+process STATS_MSA {
+
+    container 'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/fe/fec0bd55a6ecb1423a40ff8e151be5c500ec561600f9ea22dce41d87d41d1451/data'
+    // oras://community.wave.seqera.io/library/amas_bash_python:d1ff2911c095b420
+
+    input:
+    path aligned_fasta
+
+    output:
+    path "summary_stats_MSA.txt", emit: summary_stats
+
+    script:
+    """
+    AMAS.py summary \\
+        -f fasta \\
+        -d dna \\
+        -i ${aligned_fasta} \\
+        -o summary_stats_MSA.txt \\
+        -c ${task.cpus}
+    """
+}
+
+process PLOT_MSA_STATS {
+
+    input:
+    path summary_stats
+    val n_samples
+
+    output:
+    path "msa_stats_*.png", optional: true, emit: plots
+
+    script:
+    """
+    module load statistics/R/4.3.1
+
+    plot_msa_stats.R ${summary_stats} ${n_samples}
+    """
+}

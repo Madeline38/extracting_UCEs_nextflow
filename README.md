@@ -29,10 +29,9 @@ French national project funded by *PEPR Dynamiques de la Biodiversité Terrestre
 | 6 | Contig-to-Probe Alignment | LASTZ | Align contigs against the supplied UCE probe FASTA. |
 | 7 | Paralogs Removal | awk script | Exclude loci with ambiguous or multiple contig-to-locus matches. |
 | 8 | Multiple Sequence Alignment | Python script, awk script, [MAFFT](https://github.com/GSLBiotech/mafft) | Extract flanked sequences, align them by locus, and produce the UCE summary report. Trimming MSA option are optional. |
-| 9 | Phylogenetic Format Conversion | Biopython package | Convert alignments to Nexus or Phylip. |
+| 9 | Phylogenetic Format Conversion | [AMAS]| Convert alignments to Nexus or Phylip. |
 
 Outputs are published under the `outdir` directory (default: `results/`; see [Outputs](#outputs)).
-
 
 ## Requirements
 

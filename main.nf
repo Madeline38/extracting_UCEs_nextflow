@@ -11,9 +11,9 @@ include { ASSEMBLY_SPADES ; ASSEMBLY_MEGAHIT                        		          
 include { QUAST ; BUSCO_DOWNLOAD ; BUSCO                          	                  } from './modules/5.qualityAssembly.nf'
 include { ALIGNMENT_LASTZ                                           		          } from './modules/6.matchContigsToProbes.nf'
 include { REMOVE_PARALOGS ; SUMMARY_REMOVE_PARALOGS                 		          } from './modules/7.removeParalogs.nf'
-include { EXTRACT_FLANKED ; COMBINE_BY_LOCUS ; MSA_MAFFT ; SUMMARY_MSA   } from './modules/8.multipleSequenceAlignment.nf'
+include { EXTRACT_FLANKED ; COMBINE_BY_LOCUS ; MSA_MAFFT ; SUMMARY_MSA ; STATS_MSA ; PLOT_MSA_STATS } from './modules/8.multipleSequenceAlignment.nf'
 include { CLIPKIT ; FILTER_MSA ; BMGE ; TRIMAL                                                   	   	          } from './modules/8.bis.trimmingMSA.nf'
-include { NEXUS_FORMAT ; PHYLIP_FORMAT                             		              } from './modules/9.phylogeneticFormat.nf'
+include { CONCATENATE_MSA                             		              } from './modules/9.phylogeneticFormat.nf'
 
 
 
@@ -56,11 +56,10 @@ def fastqc_after_ch         = channel.empty()
 def multiqc_after_ch        = channel.empty()
 def logs_ch                 = channel.empty()
 def contigs_ch              = channel.empty()
-def nexus_ch                = channel.empty()
-def phylip_ch               = channel.empty()
 def mafft_ch                = channel.empty()
 def mafft_filtered_ch       = channel.empty()
 def mafft_trimmed_ch        = channel.empty()
+def concatenated_ch         = channel.empty()
 
 
 // skip_assembly is false (by default)
@@ -160,62 +159,64 @@ else  {
         .map { f -> tuple(f.simpleName, f) } // create a tuple with the sample name and the path to the contigs file
 }
 
-    // 5. quality assembly step
-    QUAST(contigs_ch) // analyse metrics of the assembly (N50, L50...)
-    BUSCO_DOWNLOAD() // download the busco database (genes of hymenoptera_odb12 database by default)
-    BUSCO(contigs_ch, BUSCO_DOWNLOAD.out.db.first()) // analyse the completeness of the assembly with busco
+// 5. quality assembly step
+QUAST(contigs_ch) // analyse metrics of the assembly (N50, L50...)
+BUSCO_DOWNLOAD() // download the busco database (genes of hymenoptera_odb12 database by default)
+BUSCO(contigs_ch, BUSCO_DOWNLOAD.out.db.first()) // analyse the completeness of the assembly with busco
 
 
-    // 6. do alignment contigs with probes (reference loci)
-    ALIGNMENT_LASTZ (contigs_ch, probes_file)
+// 6. do alignment contigs with probes (reference loci)
+ALIGNMENT_LASTZ (contigs_ch, probes_file)
 
-    // 7. remove paralogs
-    REMOVE_PARALOGS(ALIGNMENT_LASTZ.out.lastz_results)
-    n_samples_ch = REMOVE_PARALOGS.out.clean.count() // count the number of samples to use it in the FILTER_MSA process
+// 7. remove paralogs
+REMOVE_PARALOGS(ALIGNMENT_LASTZ.out.lastz_results)
+n_samples_ch = contigs_ch.count()  // count the number of samples to use it in the FILTER_MSA process
 
-    SUMMARY_REMOVE_PARALOGS(REMOVE_PARALOGS.out.stats.map { sample, path -> path }.collect())
+SUMMARY_REMOVE_PARALOGS(REMOVE_PARALOGS.out.stats.map { sample, path -> path }.collect())
 
-    // 8. do multiple sequence alignment with the cleaned sam files and the loci to keep
-    EXTRACT_FLANKED(REMOVE_PARALOGS.out.clean)
+// 8. do multiple sequence alignment with the cleaned sam files and the loci to keep
+EXTRACT_FLANKED(REMOVE_PARALOGS.out.clean)
 
 
-    COMBINE_BY_LOCUS(
-        EXTRACT_FLANKED.out.sequences
-            .map { sample, files -> files }
-            .flatten()
-            .collect(),
-    )
+COMBINE_BY_LOCUS(
+    EXTRACT_FLANKED.out.sequences
+        .map { sample, files -> files }
+        .flatten()
+        .collect(),
+)
 
-    MSA_MAFFT(COMBINE_BY_LOCUS.out.combined.flatten())
-    mafft_ch = MSA_MAFFT.out.aligned
-
+MSA_MAFFT(COMBINE_BY_LOCUS.out.combined.flatten())
+mafft_ch = MSA_MAFFT.out.aligned
 
 // differents possibility of trimming the MSA(clipkit, trimal, bmge) or no trimming at all
-    msa_ch = mafft_ch   //canal de travail
+msa_ch = mafft_ch   //canal de travail
     
-    if ( params.trimming == 'clipkit' ) {
-        CLIPKIT(mafft_ch)
-        mafft_trimmed_ch = CLIPKIT.out.clipkit_aligned
-    }
+if ( params.trimming == 'clipkit' ) {
+    CLIPKIT(mafft_ch)
+    mafft_trimmed_ch = CLIPKIT.out.clipkit_aligned
+}
 
-    else if ( params.trimming == 'bmge' ) {
-        BMGE(mafft_ch)
-        mafft_trimmed_ch = BMGE.out.bmge_aligned
-    }
+else if ( params.trimming == 'bmge' ) {
+    BMGE(mafft_ch)
+    mafft_trimmed_ch = BMGE.out.bmge_aligned
+}
 
-    else if ( params.trimming == 'trimal' ) {
-        TRIMAL(mafft_ch)
-        mafft_trimmed_ch = TRIMAL.out.trimmed_aligned
-    }
+else if ( params.trimming == 'trimal' ) {
+    TRIMAL(mafft_ch)
+    mafft_trimmed_ch = TRIMAL.out.trimmed_aligned
+}
 
 // si un trimming a eu lieu, on filtre les alignements trimmés
 if ( params.trimming != 'none' ) {
-    msa_ch = alignments_trimmed_ch
+    msa_ch = mafft_trimmed_ch
 }
 
+STATS_MSA(msa_ch.collect())
+PLOT_MSA_STATS(STATS_MSA.out.summary_stats, n_samples_ch)
+
 // par défault le filtre est à 0% donc on garde tous les locus, mais on peut changer le paramètre min_percent pour filtrer les locus avec moins de n% d'échantillons   
-FILTER_MSA(mafft_ch.collect(), n_samples_ch)
-    msa_ch = FILTER_MSA.out.filtered
+FILTER_MSA(msa_ch.collect(), n_samples_ch)
+msa_ch = FILTER_MSA.out.filtered
 
 
 SUMMARY_MSA(
@@ -233,16 +234,8 @@ SUMMARY_MSA(
         error "Unrecognised phylogenetic_format: '${params.phylogenetic_format}'. Options: ${valid_phylogenetic_format.join(', ')}"
     }
 
-    if (params.phylogenetic_format == 'nexus') {
-        NEXUS_FORMAT (FILTER_MSA.out.filtered.flatten())
-        nexus_ch = NEXUS_FORMAT.out.nexus
-        }
-          
-    else {
-        PHYLIP_FORMAT (FILTER_MSA.out.filtered.flatten())
-        phylip_ch = PHYLIP_FORMAT.out.phylip
-          }
-
+CONCATENATE_MSA(FILTER_MSA.out.filtered.collect())
+concatenated_ch = CONCATENATE_MSA.out.concatenated
     
 
 
@@ -279,14 +272,15 @@ SUMMARY_MSA(
     flanked_sequences             = EXTRACT_FLANKED.out.sequences
     locus_combined                = COMBINE_BY_LOCUS.out.combined
     alignments_all                = mafft_ch          
-    alignments_filtered           = mafft_filtered_ch
     alignments_trimmed            = mafft_trimmed_ch
+    summary_stats_msa             = STATS_MSA.out.summary_stats
+    plot_stats_msa                = PLOT_MSA_STATS.out.plots
+    alignments_filtered           = mafft_filtered_ch
     uce_summary_html              = SUMMARY_MSA.out.summary_html
     uce_summary_md                = SUMMARY_MSA.out.summary_md
     locus_counts                  = FILTER_MSA.out.counts        
     locus_membership              = FILTER_MSA.out.membership  
-    nexus_files                   = nexus_ch
-    phylip_files                  = phylip_ch
+    final_file                   = concatenated_ch
 }
 
 
@@ -328,12 +322,13 @@ output {
     flanked_sequences            {path 'Etape_8_alignments/flanked'}
     locus_combined               {path 'Etape_8_alignments/loci'}
     alignments_all               {path 'Etape_8_alignments/mafft/all'}
-    alignments_filtered          {path 'Etape_8_alignments/mafft/filtered'}
     alignments_trimmed           {path 'Etape_8_alignments/mafft/trimmed'}
+    summary_stats_msa            {path 'Etape_8_alignments/mafft/stats'}
+    plot_stats_msa               {path 'Etape_8_alignments/mafft/stats'}
+    alignments_filtered          {path 'Etape_8_alignments/mafft/filtered'}
     locus_membership             {path 'Etape_8_alignments'}
     uce_summary_html             {path 'Etape_9_final_files'}
     uce_summary_md               {path 'Etape_9_final_files'}
     locus_counts                 {path 'Etape_8_alignments'}
-    nexus_files                  {path 'Etape_9_final_files/nexus'}
-    phylip_files                 {path 'Etape_9_final_files/phylip'}
+    final_file                   {path 'Etape_9_final_files/'}
 }

@@ -8,46 +8,31 @@
 
 //===========================================================================================================
 
-process NEXUS_FORMAT {
 
-    maxForks 100
+process CONCATENATE_MSA {
 
-    // container 'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/00/00b5db083a0000c5c8b000b1bfb58d1c305ae708b43047131a54650e2ab20eaf/data'
-    // oras://community.wave.seqera.io/library/bash_gzip_python:b4b02c6d19a1749b
-
-    input:
-    path aligned_fasta
-
-    output:
-    path "*.nexus", emit: nexus
-
-    script:
-    """
-    module purge
-    module load devel/python/Python-3.11.1
-    convert_to_nexus.py ${aligned_fasta}
-    """
-}
-
-
-
-process PHYLIP_FORMAT {
-
-    maxForks 100
-
-    // container 'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/00/00b5db083a0000c5c8b000b1bfb58d1c305ae708b43047131a54650e2ab20eaf/data'
-    // oras://community.wave.seqera.io/library/bash_gzip_python:b4b02c6d19a1749b
+    container 'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/fe/fec0bd55a6ecb1423a40ff8e151be5c500ec561600f9ea22dce41d87d41d1451/data'
+    //oras://community.wave.seqera.io/library/amas_bash_python:d1ff2911c095b420   amas v1.0  python 3.15.2   bash 5.3
 
     input:
     path aligned_fasta
 
     output:
-    path "*.phy", emit: phylip
+    path "*.${params.phylogenetic_format}", emit: concatenated
 
     script:
     """
-    module purge
-    module load devel/python/Python-3.11.1
-    convert_to_phylip.py ${aligned_fasta}
+    # on ne garde que le nom de l'échantillon dans les en-têtes
+    for f in ${aligned_fasta}; do
+        sed -i '/^>/ s/ .*//' "\$f"
+    done
+
+    AMAS.py concat \\
+        -i ${aligned_fasta} \\
+        -f fasta \\
+        -d dna \\
+        -u ${params.phylogenetic_format} \\
+        -t supermatrix.${params.phylogenetic_format} \\
+        -c ${task.cpus}
     """
 }
