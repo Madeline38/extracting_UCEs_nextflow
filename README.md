@@ -15,43 +15,59 @@ French national project funded by *PEPR Dynamiques de la Biodiversité Terrestre
 
 ## Objective
 
-{name_pipeline} is a bioinformatics pipeline that can be used to extract **Ultra-Conserved Elements (UCEs)** from DNA sequencing reads in order to build a phylogenetic tree.
+UCEfull is a bioinformatics pipeline that can be used to extract **Ultra-Conserved Elements (UCEs)** from DNA sequencing reads (or from existing assemblies) and produces a file for phylogenetic analysis (IQ-TREE, phyML...).
+
+You do not need to know Nextflow to use it: you give it your reads (or contigs) and a probe file, and it returns alignments, quality reports and a supermatrix.
+
+## Workflow
+ 
+```mermaid
+flowchart TD
+    R[Paired reads] --> QC1["Quality analysis (FastQC / MultiQC)"]
+    QC1 --> DEC{skip_decontamination?}
+    DEC -- no --> K["Remove human contamination (Kraken2)"]
+    K --> QC2["Quality analysis after (FastQC / MultiQC)"]
+    QC2 --> ASM["Assembly (MEGAHIT or SPAdes)"]
+    DEC -- yes --> ASM
+    C["Optional: your own contigs<br/>--skip_assembly true"] --> QA
+    ASM --> QA["Assembly quality (QUAST / BUSCO)"]
+    D["Mandatory: your probes file<br/>--probes file_name.fasta"] --> L
+    QA --> L["Align contigs to probes (LASTZ)"]
+    L --> P[Remove paralogs]
+    P --> M["Extract flanks + multiple alignment (MAFFT)"]
+    M --> T{trimming?}
+    T -- yes --> TR["Trim alignments (ClipKIT / trimAl / BMGE)"]
+    T -- no --> S
+    TR --> S["MSA statistics (AMAS) + plots (R)"]
+    S --> F["Filter loci by completeness (min_percent)"]
+    F --> O["Concatenation (AMAS): supermatrix"]
+```
+
 
 ## Pipeline steps (`modules/`)
 
 | Step | Step name | Tools | Description |
 |---|---|---|---|
-| 1 | Quality Control (before decontamination) | [FastQC](https://github.com/s-andrews/fastqc) & [MultiQC](https://github.com/multiqc/multiqc) | Assess read quality before decontamination (read-input mode only). |
-| 2 | Decontamination | Kraken2 | Identify and remove human-classified reads; skipped with `--skip_decontamination true`. |
+| 1 | Quality Control (before decontamination) | [FastQC](https://github.com/s-andrews/fastqc) & [MultiQC](https://github.com/multiqc/multiqc) | Assess read quality (read-input only). |
+| 2 | Decontamination | [Kraken2](https://github.com/DerrickWood/kraken2) | Identify and remove human-classified reads; skipped with `--skip_decontamination true`. |
 | 3 | Quality Control (after decontamination) | [FastQC](https://github.com/s-andrews/fastqc) & [MultiQC](https://github.com/multiqc/multiqc) | Assess read quality after decontamination (when decontamination is enabled). |
 | 4 | Assembly | [MEGAHIT](https://github.com/voutcn/MEGAHIT) or [SPAdes](https://github.com/ablab/spades) | Assemble paired reads into contigs, unless existing contigs are supplied with `--skip_assembly true`. |
-| 5 | Assembly Quality Assessment | [QUAST](https://github.com/ablab/quast) & [BUSCO](https://busco.ezlab.org/) | Evaluate assembly statistics and completeness of the contigs. |
-| 6 | Contig-to-Probe Alignment | LASTZ | Align contigs against the supplied UCE probe FASTA. |
+| 5 | Assembly Quality | [QUAST](https://github.com/ablab/quast) & [BUSCO](https://busco.ezlab.org/) | Evaluate assembly statistics and completeness of the contigs. |
+| 6 | Contig-to-Probe Alignment | [LASTZ](https://lastz.github.io/lastz/) | Align contigs against the supplied fasta file of UCEs probes. |
 | 7 | Paralogs Removal | awk script | Exclude loci with ambiguous or multiple contig-to-locus matches. |
-| 8 | Multiple Sequence Alignment | Python script, awk script, [MAFFT](https://github.com/GSLBiotech/mafft) | Extract flanked sequences, align them by locus, and produce the UCE summary report. Trimming MSA option are optional. |
-| 9 | Phylogenetic Format Conversion | [AMAS]| Convert alignments to Nexus or Phylip. |
+| 8.1 | Multiple Sequence Alignment | Python/awk scripts, [MAFFT](https://mafft.cbrc.jp/alignment/software/) | Extract flanked sequences, align them by locus, and produce statistics and plots on the alignments. Produces the UCE summary report. |
+| 8.2 | Trimming | [ClipKIT](https://github.com/jlsteenwyk/clipkit), [trimAl](https://trimal.readthedocs.io/en/latest/), [BMGE](https://gitlab.pasteur.fr/GIPhy/BMGE) | Trimming is optional. |
+| 8.3 | Filtering | bash script | Filtering is optional. Keeps loci present in at least `min_percent` % of samples (minimum 2 samples). |
+| 9 | Phylogenetic Format Conversion | [AMAS](https://github.com/marekborowiec/AMAS) | Convert alignments to a single phylip or nexus file adapted to phylogenetic analysis |
 
 Outputs are published under the `outdir` directory (default: `results/`; see [Outputs](#outputs)).
 
 ## Requirements
 
-- A SLURM cluster configured for the `workq` queue, as specified in `nextflow.config` which normally is related to Genotoul cluster
-- Nextflow 25.10.2 (or a later version) available as a module, for example:
-  ```bash
-  module avail nextflow
-  module load bioinfo/Nextflow/26.04.6
-  ```
-- Singularity/Apptainer available for running the containers :
-  ```bash
-  module avail apptainer
-  module load containers/Apptainer/1.4.1
-  ```
-- Java available :
-  ```bash
-  module avail java
-  module load devel/java/24.0.2
-  ```
-- If decontamination is enabled, an accessible Kraken2 database. The default path is genotoul cluster-specific and can be overridden with `--kraken_db`.
+- A SLURM cluster (default: Genotoul, queue `workq`).
+- Nextflow ≥ 25.10 (tested with 26.04.6), Apptainer/Singularity and Java.
+- A Kraken2 database if decontamination is enabled (default path is Genotoul-specific, override with `--kraken_db`).
+- Internet access from the compute nodes for the first run: container download and `BUSCO_DOWNLOAD` (the BUSCO lineage is then cached).
 
 ## Input data
 
@@ -67,87 +83,126 @@ Outputs are published under the `outdir` directory (default: `results/`; see [Ou
 - **Existing contigs (optional)**: when using `--skip_assembly true`, provide a directory containing one or more `.fasta` files with the contigs for each sample.
 
 
+> **Note:** this pipeline does not trim input reads. Adapter and quality trimming must be performed beforehand (for example, with Trimmomatic, Fastp or Illumiprocessor).
 
-> **Note:** this pipeline does not trim input reads. Adapter and quality trimming must be performed beforehand (for example, with Trimmomatic or Illumiprocessor).
+## Installation and usage 
 
-## Installation and usage
+These are commands for Genotoul cluster
 
 ```bash
 git clone https://github.com/Madeline38/extracting_UCEs_nextflow.git
 cd extracting_UCEs_nextflow
+module purge
+module load devel/java/24.0.2
+module load bioinfo/Nextflow/26.04.6
+module load containers/Apptainer/1.4.1
 nextflow run main.nf --reads [raw_data] --probes [probes_file] [OPTION]
 ```
 
 
-## Parameters (`nextflow.config`)
+### Run on Genotoul (recommended: through a SLURM job)
 
-| Parameter | Default value | Description |
-|---|---|---|
-| `reads` | `none` | Directory containing paired, compressed FASTQ reads. Required unless `--skip_assembly true` is used. |
-| `skip_decontamination` | `false` | Set to `true` to skip human-read decontamination when starting from reads. |
-| `kraken_db` | `'/bank/kraken/k2_pluspfp_20251015'` | Path to the Kraken2 database used for decontamination. This default is environment-specific. |
-| `keep_kraken_output` | `false` | Keep the large intermediate files produced by Kraken2 during the decontamination step. Enabling this preserves more cached data, which speeds up reruns with -resume, but requires significant disk space. By default, these files are deleted. |
-| `skip_assembly` | `false` | Set to `true` to skip read processing and assembly and use existing contigs instead. |
-| `contigs` | `none` | Directory containing input contig FASTA files. Required when `--skip_assembly true` is used; the workflow looks for `*.fasta` files. |
-| `type_assembly` | `megahit` | Assembler to use: `megahit` or `spades`. |
-| `busco_db` | `hymenoptera_odb12` | BUSCO lineage database used to assess assembly completeness. |
-| `probes` | `none` | FASTA file of UCE probes. Required in both execution modes. |
-| `flank` | `160` | Number of bases to extract on each side of a matched UCE. |
-| `min_percent` | `0` | Minimum percentage of samples in which a locus must be present to retain it (0–100). At least two samples are required for a locus to be retained. |
-| `trimming` | `none` | Optional alignment trimming. clipKIT, bmge and trimAl are available; default is no trimming. |
-| `mode_clipkit` | `kpic` | If you use clipkit you can chose the option you want; default is kpic. |
-| `phylogenetic_format` | `phylip` | Output alignment format: `nexus` or `phylip`. |
-| `outdir` | `results` | Output directory for published files and pipeline reports. |
-
-
-Parameters can be overridden on the command line. For paired reads (the default mode):
+Do not run `nextflow run` directly on the login node. Create `run_pipeline.sh` (changing the file names according to yours):
 
 ```bash
+#!/bin/bash
+#SBATCH -J uce_pipeline
+#SBATCH -p workq
+#SBATCH -t 2-00:00:00
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=5G
+ 
+module load devel/java/24.0.2
+module load bioinfo/Nextflow/26.04.6
+module load containers/Apptainer/1.4.1
+ 
 nextflow run main.nf \
-  --reads clean-fastq \
+  --reads reads_dir \
   --probes probes_hymeno_assembled_wrap.fasta \
   --outdir results
 ```
 
-To start from existing contigs instead of reads and assembly, provide a directory containing `.fasta` files:
+Then submit it with `sbatch run_pipeline.sh`. Progress is written to `slurm-<job-id>.out`.
 
+
+### Start from existing contigs
+ 
 ```bash
 nextflow run main.nf \
   --skip_assembly true \
   --contigs contigs_dir \
   --probes probes_hymeno_assembled_wrap.fasta \
-  --min_percent 50 \
-  --phylogenetic_format phylip \
   --outdir results
 ```
 
-To resume an interrupted run or reuse valid cached tasks after changing downstream steps, repeat the original command and add `-resume`, for example:
+> Use an `--outdir` **different from** the `--contigs` directory. Otherwise the pipeline republishes contigs onto themselves and can break the symbolic links.
 
-```bash
-nextflow run main.nf \
-  --reads clean-fastq \
-  --probes probes_hymeno_assembled_wrap.fasta \
-  --outdir results \
-  -resume
-```
+### Resume an interrupted run
+ 
+Repeat the same command and add `-resume`. Completed tasks are reused.
+
+## Parameters (`nextflow.config`)
+
+Parameters are set in `nextflow.config`.
+
+| Parameter | Default value | Description |
+|---|---|---|
+| `reads` | `null` | Directory containing paired, compressed FASTQ reads. Required unless `--skip_assembly true` is used. |
+| `skip_decontamination` | `false` | Set to `true` to skip human-read decontamination when starting from reads. |
+| `kraken_db` | `'/bank/kraken/k2_pluspfp_20251015'` | Path to the Kraken2 database used for decontamination. This default is environment-specific. |
+| `keep_kraken_output` | `false` | Keep the large intermediate files produced by Kraken2 during the decontamination step. Enabling this preserves more cached data, which speeds up reruns with -resume, but requires significant disk space. By default, these files are deleted. |
+| `skip_assembly` | `false` | Set to `true` to skip read processing and assembly and use existing contigs instead. |
+| `contigs` | `null` | Directory containing input contig FASTA files. Required when `--skip_assembly true` is used; the workflow looks for `*.fasta` files. |
+| `type_assembly` | `megahit` | Assembler to use: `megahit` or `spades`. |
+| `busco_db` | `hymenoptera_odb12` | BUSCO lineage database used to assess assembly completeness. |
+| `probes` | `null` | FASTA file of UCE probes. Required in both execution modes. |
+| `flank` | `8000` | Number of bases to extract on each side of a matched UCE. |
+| `min_percent` | `0` | Minimum percentage of samples in which a locus must be present to retain it (0–100). At least two samples are required for a locus to be retained. |
+| `trimming` | `none` | Optional alignment trimming. clipKIT, bmge and trimAl are available; default is no trimming. |
+| `mode_clipkit` | `kpic` | ClipKIT mode, used only with `--trimming clipkit`. |
+| `phylogenetic_format` | `phylip` | Output alignment format: `nexus` or `phylip`. |
+| `outdir` | `results` | Output directory name. |
+
 
 ## Outputs
 
 ```
 results/
-├── Etape_1_analyses/                      # FastQC and MultiQC before decontamination
-├── Etape_2_decontamination/               # Kraken2 reports, cleaned reads, and summary
-├── Etape_3_analyses_post_decontamination/ # FastQC and MultiQC after decontamination
-├── Etape_4_assemblage/                    # contigs and assembly logs
-├── Etape_5_analyses_assemblage/           # QUAST and BUSCO results
-├── Etape_6_alignment_probes_contigs/      # LASTZ probe-matching results
-├── Etape_7_remove_paralogs/               # filtered SAM files and paralogs reports
-├── Etape_8_alignments/                   # flanked sequences, loci, and MAFFT alignments
-├── Etape_9_final_files/                   # UCE summary and Nexus/Phylip output
-└── pipeline_info/                         # Nextflow report, timeline, and trace
+├── Etape_1_analyses/                       # FastQC / MultiQC before decontamination
+├── Etape_2_decontamination/                # Kraken2 reports, cleaned reads, contamination summary
+├── Etape_3_analyses_post_decontamination/  # FastQC / MultiQC after decontamination
+├── Etape_4_assemblage/                     # contigs and assembly logs
+├── Etape_5_analyses_assemblage/            # QUAST and BUSCO
+├── Etape_6_alignment_probes_contigs/       # LASTZ results
+├── Etape_7_remove_paralogs/                # filtered SAM files and paralog reports
+├── Etape_8_alignments/
+│   ├── flanked/                            # flanked sequences per sample
+│   ├── loci/                               # sequences grouped by locus
+│   ├── mafft/all/                          # raw MAFFT alignments
+│   ├── trimmed/                            # trimmed alignments (only if trimming is used)
+│   ├── mafft/filtered/                     # alignments kept after min_percent filtering
+│   └── stats/                              # AMAS summary table and figures
+├── Etape_9_final_files/                    # UCE summary, nexus/phylip per locus, supermatrix
+└── pipeline_info/                          # Nextflow report, timeline and trace
 ```
+Some folders are empty when the corresponding step is skipped.
 
-Some directories are only populated when their corresponding steps run (for example, decontamination outputs when `--skip_decontamination true` is not set).
+### Where to look first after the run
+
+| File | What it tells you |
+|---|---|
+| `Etape_2_decontamination/contamination_report.html` | Share of human reads before cleaning, reads removed, and whether decontamination worked. |
+| `Etape_1_analyses/multiqc/`, `Etape_3_…/multiqc/` | Summary of all your reads quality. |
+| `Etape_5_analyses_assemblage/` (QUAST, BUSCO) | Assembly quality. |
+| `Etape_7_remove_paralogs/remove_paralogs_report.html` | Number of loci per sample before and after removing paralogs. |
+| `Etape_8_alignments/stats/msa_stats_*.png` | Distribution of alignment length, variable sites, missing data, and PCA of loci. |
+| `Etape_9_final_files/uce_summary.html` | Number of loci kept and samples per locus. |
+| `Etape_9_final_files/supermatrix.*` supermatrix file | Input for the phylogenetic analysis. |
+| `pipeline_info/report.html` | Real CPU and memory used by each step (you can adapt it in nextflow.config according to your needs). |
+
+### Next step: build a tree
+
+Take the final supermatrix file and let’s start building your phylogeny! Don't hesitate to use integrative methods for more secure results.
 
 ## Notes from previous runs
 
@@ -162,7 +217,7 @@ As an example, a previous run with 21 shotgun samples, decontamination and MEGAH
 
 ## Learning more
 
-To get familiar with Nextflow and understand each process in this pipeline: [training.nextflow.io](https://training.nextflow.io/latest/hello_nextflow/)
+If you want to get familiar with Nextflow and understand each process in this pipeline: [training.nextflow.io](https://training.nextflow.io/latest/hello_nextflow/)
 
 ## Citation
 

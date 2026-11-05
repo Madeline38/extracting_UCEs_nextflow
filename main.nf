@@ -4,16 +4,16 @@
 // modules
 //========//
 
-include { FASTQC ; MULTIQC                                 		                      } from './modules/1.qualityControl.nf'
-include { CHECK ; REMOVE ; SUMMARY_DECONTAMINATION          	        	          } from './modules/2.removeContamination.nf'
-include { FASTQC_AFTER ; MULTIQC_AFTER                     		                      } from './modules/3.qualityControlAfter.nf'
-include { ASSEMBLY_SPADES ; ASSEMBLY_MEGAHIT                        		          } from './modules/4.assembly.nf'
-include { QUAST ; BUSCO_DOWNLOAD ; BUSCO                          	                  } from './modules/5.qualityAssembly.nf'
-include { ALIGNMENT_LASTZ                                           		          } from './modules/6.matchContigsToProbes.nf'
-include { REMOVE_PARALOGS ; SUMMARY_REMOVE_PARALOGS                 		          } from './modules/7.removeParalogs.nf'
-include { EXTRACT_FLANKED ; COMBINE_BY_LOCUS ; MSA_MAFFT ; SUMMARY_MSA ; STATS_MSA ; PLOT_MSA_STATS } from './modules/8.multipleSequenceAlignment.nf'
-include { CLIPKIT ; FILTER_MSA ; BMGE ; TRIMAL                                                   	   	          } from './modules/8.bis.trimmingMSA.nf'
-include { CONCATENATE_MSA                             		              } from './modules/9.phylogeneticFormat.nf'
+include { FASTQC ; MULTIQC                                 		                                    } from './modules/1.qualityControl.nf'
+include { CHECK ; REMOVE ; SUMMARY_DECONTAMINATION          	        	                        } from './modules/2.removeContamination.nf'
+include { FASTQC_AFTER ; MULTIQC_AFTER                     		                                    } from './modules/3.qualityControlAfter.nf'
+include { ASSEMBLY_SPADES ; ASSEMBLY_MEGAHIT                        		                        } from './modules/4.assembly.nf'
+include { QUAST ; BUSCO_DOWNLOAD ; BUSCO                          	                                } from './modules/5.qualityAssembly.nf'
+include { ALIGNMENT_LASTZ                                           		                        } from './modules/6.matchContigsToProbes.nf'
+include { REMOVE_PARALOGS ; SUMMARY_REMOVE_PARALOGS                 		                        } from './modules/7.removeParalogs.nf'
+include { EXTRACT_FLANKED ; COMBINE_BY_LOCUS ; MSA_MAFFT ; SUMMARY_MSA ; STATS_MSA ; PLOT_MSA_STATS } from './modules/8.1.multipleSequenceAlignment.nf'
+include { CLIPKIT ; FILTER_MSA ; BMGE ; TRIMAL                                                   	} from './modules/8.2.trimmingMSA.nf'
+include { CONCATENATE_MSA                             		                                        } from './modules/9.phylogeneticFormat.nf'
 
 
 
