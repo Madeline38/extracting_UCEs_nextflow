@@ -19,31 +19,6 @@ UCEfull is a bioinformatics pipeline that can be used to extract **Ultra-Conserv
 
 You do not need to know Nextflow to use it: you give it your reads (or contigs) and a probe file, and it returns alignments, quality reports and a supermatrix.
 
-## Workflow
- 
-```mermaid
-flowchart TD
-    R[Paired reads] --> QC1["Quality analysis (FastQC / MultiQC)"]
-    QC1 --> DEC{skip_decontamination?}
-    DEC -- no --> K["Remove human contamination (Kraken2)"]
-    K --> QC2["Quality analysis after (FastQC / MultiQC)"]
-    QC2 --> ASM["Assembly (MEGAHIT or SPAdes)"]
-    DEC -- yes --> ASM
-    C["Optional: your own contigs<br/>--skip_assembly true"] --> QA
-    ASM --> QA["Assembly quality (QUAST / BUSCO)"]
-    D["Mandatory: your probes file<br/>--probes file_name.fasta"] --> L
-    QA --> L["Align contigs to probes (LASTZ)"]
-    L --> P[Remove paralogs]
-    P --> M["Extract flanks + multiple alignment (MAFFT)"]
-    M --> T{trimming?}
-    T -- yes --> TR["Trim alignments (ClipKIT / trimAl / BMGE)"]
-    T -- no --> S
-    TR --> S["MSA statistics (AMAS) + plots (R)"]
-    S --> F["Filter loci by completeness (min_percent)"]
-    F --> O["Concatenation (AMAS): supermatrix"]
-```
-
-
 ## Pipeline steps (`modules/`)
 
 | Step | Step name | Tools | Description |
@@ -233,6 +208,30 @@ Madeline GUENE
   <img src="https://cat.opidor.fr/images/7/7b/Screenshot_2022-07-05_at_11-35-16_M%C3%A9dias_-_LECA_-_Laboratoire_d%E2%80%99%C3%A9cologie_alpine.png" alt="Logo LECA" width="125"/>
 </div>
 
+
+## Workflow
+ 
+```mermaid
+flowchart TD
+    R[Paired reads] --> QC1["Quality analysis (FastQC / MultiQC)"]
+    QC1 --> DEC{skip_decontamination?}
+    DEC -- no --> K["Remove human contamination (Kraken2)"]
+    K --> QC2["Quality analysis after (FastQC / MultiQC)"]
+    QC2 --> ASM["Assembly (MEGAHIT or SPAdes)"]
+    DEC -- yes --> ASM
+    C["Optional: your own contigs<br/>--skip_assembly true"] --> QA
+    ASM --> QA["Assembly quality (QUAST / BUSCO)"]
+    D["Mandatory: your probes file<br/>--probes file_name.fasta"] --> L
+    QA --> L["Align contigs to probes (LASTZ)"]
+    L --> P[Remove paralogs]
+    P --> M["Extract flanks + multiple alignment (MAFFT)"]
+    M --> T{trimming?}
+    T -- yes --> TR["Trim alignments (ClipKIT / trimAl / BMGE)"]
+    T -- no --> S
+    TR --> S["MSA statistics (AMAS) + plots (R)"]
+    S --> F["Filter loci by completeness (min_percent)"]
+    F --> O["Concatenation (AMAS): supermatrix"]
+```
 
 
 
