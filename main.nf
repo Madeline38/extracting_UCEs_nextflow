@@ -323,8 +323,8 @@ output {
     locus_combined               {path 'Etape_8_alignments/loci'}
     alignments_all               {path 'Etape_8_alignments/mafft/all'}
     alignments_trimmed           {path 'Etape_8_alignments/mafft/trimmed'}
-    summary_stats_msa            {path 'Etape_8_alignments/mafft/stats'}
-    plot_stats_msa               {path 'Etape_8_alignments/mafft/stats'}
+    summary_stats_msa            {path 'Etape_8_alignments/stats'}
+    plot_stats_msa               {path 'Etape_8_alignments/stats'}
     alignments_filtered          {path 'Etape_8_alignments/mafft/filtered'}
     locus_membership             {path 'Etape_8_alignments'}
     uce_summary_html             {path 'Etape_9_final_files'}
