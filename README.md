@@ -1,17 +1,15 @@
 ***
 
-<table align="center">
+<table align="center" border="0">
   <tr>
-    <td>
-      <img src="https://images.phylopic.org/images/5760a3dc-c539-4f89-9921-d6b0659bdd31/thumbnail/128x128.png?v=19bde0a1949"
-           alt="PhyloPic logo" height="70">
+    <td align="center" valign="middle" style="border: none;">
+      <img src="https://images.phylopic.org/images/5760a3dc-c539-4f89-9921-d6b0659bdd31/thumbnail/128x128.png?v=19bde0a1949" width="65">
     </td>
-    <td>
+    <td align="center" valign="middle" style="border: none; padding: 0 20px;">
       <h1>UCEfull</h1>
     </td>
-    <td>
-      <img src="https://images.phylopic.org/images/eab138d3-adc0-4163-91ef-2c5ec0c94aeb/thumbnail/128x128.png?v=19f450c7175"
-           alt="PhyloPic logo" height="70">
+    <td align="center" valign="middle" style="border: none;">
+      <img src="https://images.phylopic.org/images/eab138d3-adc0-4163-91ef-2c5ec0c94aeb/thumbnail/128x128.png?v=19f450c7175" width="65">
     </td>
   </tr>
 </table>
