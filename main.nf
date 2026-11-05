@@ -12,7 +12,8 @@ include { QUAST ; BUSCO_DOWNLOAD ; BUSCO                          	             
 include { ALIGNMENT_LASTZ                                           		                        } from './modules/6.matchContigsToProbes.nf'
 include { REMOVE_PARALOGS ; SUMMARY_REMOVE_PARALOGS                 		                        } from './modules/7.removeParalogs.nf'
 include { EXTRACT_FLANKED ; COMBINE_BY_LOCUS ; MSA_MAFFT ; SUMMARY_MSA ; STATS_MSA ; PLOT_MSA_STATS } from './modules/8.1.multipleSequenceAlignment.nf'
-include { CLIPKIT ; FILTER_MSA ; BMGE ; TRIMAL                                                   	} from './modules/8.2.trimmingMSA.nf'
+include { CLIPKIT ; BMGE ; TRIMAL                                                                	} from './modules/8.2.trimmingMSA.nf'
+include { FILTER_MSA                                                                             	} from './modules/8.3.filterMSA.nf'
 include { CONCATENATE_MSA                             		                                        } from './modules/9.phylogeneticFormat.nf'
 
 
