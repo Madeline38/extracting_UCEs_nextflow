@@ -166,8 +166,8 @@ results/
 │   ├── flanked/                            # flanked sequences per sample
 │   ├── loci/                               # sequences grouped by locus
 │   ├── mafft/all/                          # raw MAFFT alignments
-│   ├── trimmed/                            # trimmed alignments (only if trimming is used)
 │   ├── mafft/filtered/                     # alignments kept after min_percent filtering
+│   ├── mafft/trimmed/                      # trimmed alignments (only if trimming is used)
 │   └── stats/                              # AMAS summary table and figures
 ├── Etape_9_final_files/                    # UCE summary, nexus/phylip per locus, supermatrix
 └── pipeline_info/                          # Nextflow report, timeline and trace
@@ -189,7 +189,7 @@ Some folders are empty when the corresponding step is skipped.
 
 ### Next step: build a tree
 
-Take the final supermatrix file and let’s start building your phylogeny! Don't hesitate to use integrative methods for more secure results.
+Take the final supermatrix file and let’s start your phylogeny! Integrate complementary approaches to improve the robustness and reliability of your results.
 
 ## Notes from previous runs
 
