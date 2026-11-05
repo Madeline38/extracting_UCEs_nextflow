@@ -1,12 +1,14 @@
 ***
 
-<p align="center">
-  <img src="https://images.phylopic.org/images/5760a3dc-c539-4f89-9921-d6b0659bdd31/thumbnail/128x128.png?v=19bde0a1949" width="65" align="left">
+<div align="center">
+  <img src="https://images.phylopic.org/images/5760a3dc-c539-4f89-9921-d6b0659bdd31/thumbnail/128x128.png?v=19bde0a1949"
+       width="65" align="left">
 
-  <img src="https://images.phylopic.org/images/eab138d3-adc0-4163-91ef-2c5ec0c94aeb/thumbnail/128x128.png?v=19f450c7175" width="65" align="right">
+  <img src="https://images.phylopic.org/images/eab138d3-adc0-4163-91ef-2c5ec0c94aeb/thumbnail/128x128.png?v=19f450c7175"
+       width="65" align="right">
 
   <h1>UCEfull</h1>
-</p>
+</div>
 
 <p align="center"><b>From reads to a phylogenetic-ready supermatrix: a Nextflow pipeline to extract Ultra-Conserved Elements (UCEs).</b></p>
 
