@@ -1,10 +1,8 @@
-//=========================================//
-// process for filtering multiple alignment 
-//=========================================//
+///======================================================//
+// Filtering : process to filter MSA by taxon completion
+//=======================================================//
 
-// the objective here is to filter multiple alignment to remove loci that are not present in enough samples and to generate a summary of the filtering process
-
-
+// the objective here is to filter multiple alignment to remove loci that are not present in enough samples and to generate a summary of the filtering process (it is done in PHYLUCE pipeline)
 
 //===========================================================================================================
 

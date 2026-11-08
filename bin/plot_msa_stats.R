@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
-# usage : plot_msa_stats.R <summary_stats_MSA.txt> <n_samples>
-# in 8.multipleSequenceAlignment.nf
+# where : Process PLOT_MSA_STATS : plot_msa_stats.R ${summary_stats} ${n_samples}
+# usage : This script generates plots summarizing multiple sequence alignment (MSA) statistics. It creates boxplots for various alignment metrics, distribution of the number of taxa per locus, and performs PCA analysis on the data.
 
 suppressPackageStartupMessages({
   library(dplyr)
@@ -9,7 +9,7 @@ suppressPackageStartupMessages({
 })
 
 args      <- commandArgs(trailingOnly = TRUE)
-infile    <- args[1]
+stats     <- args[1]
 n_samples <- as.numeric(args[2])
 
 theme_set(theme_bw())
@@ -19,7 +19,7 @@ vars_comp <- c("No_of_taxa", "Alignment_length", "Missing_percent",
                "Parsimony_informative_sites",
                "Proportion_parsimony_informative", "GC_content")
 
-d <- read.delim(infile, check.names = FALSE) %>%
+d <- read.delim(stats, check.names = FALSE) %>%
   mutate(Prop_taxa  = No_of_taxa / n_samples,
          taxa_class = cut(Prop_taxa, breaks = c(0, .5, .75, 1.0001),
                           labels = c("<50 %", "50-75 %", ">75 %"),

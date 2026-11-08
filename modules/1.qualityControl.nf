@@ -1,13 +1,11 @@
-//====================================================//
-// process for fastqc with raw data no decontaminated
-//====================================================//
+//==========================================================//
+// Quality control : process to check quality of sequencing
+//==========================================================//
 
-// the objective here is to do a multi fastqc to see if the reads have been well trimmed before
-
-
+// tools : fastqc (v.0.12.1) and multiqc (v.1.35)
+// future : could be used before and after fastp cleaning instead in one module "cleanData.nf" 
 
 //===========================================================================================================
-
 
 process FASTQC {
 
@@ -22,8 +20,6 @@ process FASTQC {
 
     script:
     """
-    #module load bioinfo/FastQC/0.12.1
-
     mkdir -p fastqc_${sample}
     
     fastqc \\
@@ -46,8 +42,6 @@ process MULTIQC {
 
     script:
     """
-    #module load bioinfo/MultiQC/1.35
-
     multiqc ${reports} -o multiqc_report
     """
 }

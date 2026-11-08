@@ -1,9 +1,11 @@
-//=======================================//
-// process pour match contigs to probes
-//=======================================//
+//===============================================//
+// Alignment : process to match contigs to probes
+//===============================================//
 
 // the objective here is to realise an alignment with lastz tool between contigs obtained and probes
 
+// tool : LASTZ (v.1.04.22) 
+// future : check option more in details
 
 //===========================================================================================================
 
@@ -21,9 +23,7 @@ process ALIGNMENT_LASTZ {
 
     script:
     
-    """
-    #module load bioinfo/LASTZ/1.04.22
-    
+    """    
     lastz ${probes}[multiple,unmask] \\
                 "${contigs}"[unmask] \\
                 --gapped \\

@@ -1,10 +1,9 @@
-//====================================================//
-// process for fastqc with raw data no decontaminated
-//====================================================//
+//=====================================================================================//
+// Quality control after : process to check quality of sequencing after decontamination
+//======================================================================================//
 
-// the objective here is to do a multi fastqc to see if the reads have been well trimmed before
-
-
+// tools : fastqc (v.0.12.1) and multiqc (v.1.35)
+// future : could be used before and after fastp cleaning instead in one module "cleanData.nf" 
 
 //===========================================================================================================
 

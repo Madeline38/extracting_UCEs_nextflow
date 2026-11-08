@@ -1,9 +1,9 @@
-//=========================================================================//
-// process for analyzing the quality of the assembly with quast and busco
-//=========================================================================//
+//=================================================================//
+// Quality assembly : process to check the metrics of the assembly
+//=================================================================//
 
-// the objective here is to understand better what we obtained with the assembly and to see if there is any warning to raise
-
+// tools : QUAST (v.5.2.0) or BUSCO (v.6.0.0)
+// future : add possibility to put BUSCO as a non obligatory process, add html summary report for QUAST
 
 //===========================================================================================================
 

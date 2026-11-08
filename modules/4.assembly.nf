@@ -1,10 +1,9 @@
-//=========================//
-// process for the assembly
-//=========================//
+//=====================================================================================//
+// Assembly : process to assembly reads into contigs
+//======================================================================================//
 
-// the objective here is to do an assembly of the reads using spades or megahit
-
-
+// tools : SPAdes (v.4.2.0) or MEGAHIT (v.1.2.9)
+// future : could be better to put the non permanent files in the scratch process to reduce the disk usage
 
 //===========================================================================================================
 

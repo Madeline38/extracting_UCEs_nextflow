@@ -1,14 +1,14 @@
-//====================================================================//
-// process for decontamination of reads using kraken2 and kraken tools
-//====================================================================//
+//=========================================================================//
+// Decontamination : process to check contamination and remove human reads 
+//=========================================================================//
 
-// the objective here is to check the reads for contamination and remove any reads that are classified as human contamination
-// later, it will be possible in the options to chose another type of decontamination too or at the opposite to select only the contaminated reads for example
-
-
+// tools : kraken2 (v.2.17.1), KrakenTools (v.d4a2bfe) and python (v.3.12.4)
+// future : add possibility to decontaminate from other species than human, add possibility to keep the kraken output for further analysis (-resume)
 
 //===========================================================================================================
 
+
+// Process to identify contamination
 process CHECK {
 
     maxForks 2
@@ -24,9 +24,7 @@ process CHECK {
     path "${sample}_contam.tsv", emit: stats
 
     script:
-    """
-    #module load bioinfo/Kraken2/2.17.1 
-   
+    """   
     kraken2 --db ${params.kraken_db} \\
             --paired ${reads} \\
             --threads ${task.cpus} \\
@@ -47,6 +45,7 @@ process CHECK {
 }
 
 
+// Process to remove human contamination
 process REMOVE {
 
     maxForks 3
@@ -108,7 +107,7 @@ process REMOVE {
 }
 
 
-
+// Process to generate a summary report of the decontamination process
 process SUMMARY_DECONTAMINATION {
 
     container 'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/dc/dcba98ee6037ee71e2852483e0d2fd6275db255218b3425446b5788d30ef8362/data'

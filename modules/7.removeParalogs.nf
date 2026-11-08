@@ -1,10 +1,9 @@
-//===============================//
-// process for removing paralogs
-//===============================//
+//======================================================================================//
+// Remove paralogs : process to remove some alignments (sam file) considered as paralogs
+//======================================================================================//
 
-// the objective here is to remove all paralogs from sam file we have
-
-
+// tool : Pandoc (v.3.1.2)
+// future : lot of things that can be changed and tested (for example, the criteria for removing paralogs)
 
 //===========================================================================================================
 
@@ -140,8 +139,6 @@ process SUMMARY_REMOVE_PARALOGS {
     script:
 
     """
-    #module load tools/Pandoc/3.1.2
-
     echo -e "sample\\tloci_total\\tloci_removed\\tloci_kept\\trm_A\\trm_B\\tpct_removed\\tstatus" > remove_paralogs_summary.tsv
 
     for f in ${summaries}; do

@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
+# where : Process SUMMARY_MSA : uce_report.py ${locus_counts} ${locus_membership} uce_summary.md ${aligned_fasta}
+# usage : This script generates a global report on the UCEs extracted from the samples, including statistics on the number of UCEs kept and removed, as well as %GC content for each sample.
+
 import sys
 import csv
 from collections import defaultdict
  
- 
+
 def read_fasta(path):
     name, seq = None, []
     with open(path) as f:

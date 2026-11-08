@@ -1,10 +1,8 @@
-//=========================================//
-// process for cleaning multiple alignment 
-//=========================================//
+//===============================================//
+// Trimming : process to trim multiple alignment
+//===============================================//
 
-// the objective here is to clean multiple alignment by reducing gaps and removing sequences that are too divergent from the consensus sequence
-
-
+// tools : ClipKIT (v.2.14.0), BMGE (v.1.12), trimAl (v.1.4.1)
 
 //===========================================================================================================
 
@@ -20,14 +18,13 @@ process CLIPKIT {
 
    script:
    """   
-   #change this with a container image
    module load bioinfo/ClipKIT/2.14.0
-
 
    #by default the mode is kpic
    clipkit ${clean_aln} -m ${params.mode_clipkit} -o ${clean_aln}_clipkit.fasta
    """
 }
+
 
 process BMGE {
 
@@ -43,7 +40,6 @@ process BMGE {
    script:
    """   
    module load bioinfo/bmge/1.12
-
 
    bmge -i ${clean_aln} -t NT -g 0.8 -b 3 -e 0.7 -of ${clean_aln}_bmge.fasta
    """
@@ -64,8 +60,6 @@ process TRIMAL {
 
     script:
     """    
-    #module load bioinfo/trimAl/1.4.1
-
     trimal -in ${clean_aln} -out ${clean_aln}_cleaned.fasta
     """
 }

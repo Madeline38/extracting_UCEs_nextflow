@@ -1,18 +1,18 @@
-//====================================================================//
-// process for formating the files to be used in phylogenetic analysis
-//=====================================================================//
+//=====================================================================================//
+// Phylogenetic formattage : process to create a supermatrix for phylogenetic analysis
+//=====================================================================================//
 
-// the objective here is to format the multiple alignment to be used in phylogenetic analysis with .nexus files for example
+// warning : this part wasn't tested yet to see if trees can be generated well from the supermatrix
 
-
+// tool : AMAS (v.1.0), python (v.3.15.2), bash (v.5.3)
+// future : add nexus format, add partition file if needed
 
 //===========================================================================================================
-
 
 process CONCATENATE_MSA {
 
     container 'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/fe/fec0bd55a6ecb1423a40ff8e151be5c500ec561600f9ea22dce41d87d41d1451/data'
-    //oras://community.wave.seqera.io/library/amas_bash_python:d1ff2911c095b420   amas v1.0  python 3.15.2   bash 5.3
+    //oras://community.wave.seqera.io/library/amas_bash_python:d1ff2911c095b420  
 
     input:
     path aligned_fasta

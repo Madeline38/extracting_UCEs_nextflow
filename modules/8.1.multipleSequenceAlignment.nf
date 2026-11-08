@@ -1,10 +1,16 @@
-//=======================================================//
-// process for realizing multiple alignment of sequences
-//========================================================//
+//=============================================================//
+// MSA : process for realizing multiple alignment of sequences
+//=============================================================//
 
-// the objective here is to extract the sequences that aligned from the sam files and to do a multiple alignment of the sequences that have enough samples per locususing mafft 
+// steps : 
+// 1. extract the sequences that aligned from the sam files
+// 2. combine the sequences by locus
+// 3. do a multiple alignment of the sequences per locus using mafft
+// 4. do a summary of the multiple alignment and generate a report
 
 
+// tools : python (v.3.12.4), mafft (v.7.505), AMAS (v.1.0), Pandoc (v.3.1.2), R (v.4.3.1)
+// future : organize better this part which is a bit messy
 
 //===========================================================================================================
 
@@ -24,10 +30,7 @@ process EXTRACT_FLANKED {
     script:
     def flank_arg = params.flank != null ? params.flank : ""
     """
-    #module load devel/python/Python-3.12.4
-
     extract_flanked.py ${clean_sam} ${sample} ${flank_arg}    
-    
     """
 }
 
@@ -79,8 +82,6 @@ process MSA_MAFFT {
     script:
     def locus = locus_fasta.baseName.replaceFirst(/^locus_/, '')
     """
-    #module load bioinfo/MAFFT/7.505
-
     mafft --auto ${locus_fasta} > ${locus}_aligned.fasta
     """
 }
@@ -101,7 +102,6 @@ process SUMMARY_MSA {
 
     script:
     """
-    #module load tools/Pandoc/3.1.2
     uce_report.py ${locus_counts} ${locus_membership} uce_summary.md ${aligned_fasta}
 
     pandoc uce_summary.md -f markdown -t html -s \\
