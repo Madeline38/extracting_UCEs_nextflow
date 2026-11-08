@@ -189,7 +189,8 @@ COMBINE_BY_LOCUS(
 MSA_MAFFT(COMBINE_BY_LOCUS.out.combined.flatten())
 mafft_ch = MSA_MAFFT.out.aligned
 
-// differents possibility of trimming the MSA(clipkit, trimal, bmge) or no trimming at all
+
+// 8.2 trimming MSA (clipkit, bmge, trimal) or no trimming at all
 msa_ch = mafft_ch   //canal de travail
     
 if ( params.trimming == 'clipkit' ) {
@@ -207,7 +208,7 @@ else if ( params.trimming == 'trimal' ) {
     mafft_trimmed_ch = TRIMAL.out.trimmed_aligned
 }
 
-// si un trimming a eu lieu, on filtre les alignements trimmés
+// 8.3 if required, filter MSA (remove loci that are not present in enough samples)
 if ( params.trimming != 'none' ) {
     msa_ch = mafft_trimmed_ch
 }
@@ -227,7 +228,7 @@ SUMMARY_MSA(
     )
 
 
-    // do reformat
+    // 9. concatenate MSA into a single file : super matrix
 
     def valid_phylogenetic_format = ['nexus', 'phylip']
     if ( !valid_phylogenetic_format.contains(params.phylogenetic_format) ) {
@@ -238,6 +239,10 @@ CONCATENATE_MSA(FILTER_MSA.out.filtered.collect())
 concatenated_ch = CONCATENATE_MSA.out.concatenated
     
 
+
+//=========//
+// publish
+//=========//
 
     publish:
     fastqc_before                 = fastqc_before_ch
