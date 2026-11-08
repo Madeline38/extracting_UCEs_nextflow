@@ -227,7 +227,6 @@ SUMMARY_MSA(
     )
 
 
-
     // do reformat
 
     def valid_phylogenetic_format = ['nexus', 'phylip']

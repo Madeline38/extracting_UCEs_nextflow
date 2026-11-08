@@ -22,9 +22,11 @@ process EXTRACT_FLANKED {
     tuple val(sample), path("${sample}-*.fasta"), optional: true, emit: sequences
 
     script:
+    def flank_arg = params.flank != null ? params.flank : ""
     """
     #module load devel/python/Python-3.12.4
-    extract_flanked.py ${clean_sam} ${sample} ${params.flank}    
+
+    extract_flanked.py ${clean_sam} ${sample} ${flank_arg}    
     
     """
 }
