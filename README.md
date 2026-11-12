@@ -45,7 +45,7 @@ You do not need to know Nextflow to use it: you give it your reads (or contigs) 
 | 8.1 | Multiple Sequence Alignment | Python/awk scripts, [MAFFT](https://mafft.cbrc.jp/alignment/software/) | Extract flanked sequences, align them by locus, and produce statistics and plots on the alignments. Produces the UCE summary report. |
 | 8.2 | Trimming | [ClipKIT](https://github.com/jlsteenwyk/clipkit), [trimAl](https://trimal.readthedocs.io/en/latest/), [BMGE](https://gitlab.pasteur.fr/GIPhy/BMGE) | Trimming is optional. |
 | 8.3 | Filtering | bash script | Filtering is optional. Keeps loci present in at least `min_percent` % of samples (minimum 2 samples). |
-| 9 | Phylogenetic Format Conversion | [AMAS](https://github.com/marekborowiec/AMAS) | Convert alignments to a single phylip or nexus file adapted to phylogenetic analysis |
+| 9 | Phylogenetic Format Conversion | [AMAS](https://github.com/marekborowiec/AMAS) | Convert alignments to a single phylip file adapted to phylogenetic analysis |
 
 Outputs are published under the `outdir` directory (default: `results/`; see [Outputs](#outputs)).
 
@@ -147,7 +147,7 @@ Parameters are set in `nextflow.config`.
 | `min_percent` | `0` | Minimum percentage of samples in which a locus must be present to retain it (0–100). At least two samples are required for a locus to be retained. |
 | `trimming` | `none` | Optional alignment trimming. clipKIT, bmge and trimAl are available; default is no trimming. |
 | `mode_clipkit` | `kpic` | ClipKIT mode, used only with `--trimming clipkit`. |
-| `phylogenetic_format` | `phylip` | Output alignment format: `nexus` or `phylip`. |
+| `phylogenetic_format` | `phylip` | Output alignment format: `phylip`. |
 | `outdir` | `results` | Output directory name. |
 
 
@@ -169,7 +169,7 @@ results/
 │   ├── mafft/filtered/                     # alignments kept after min_percent filtering
 │   ├── mafft/trimmed/                      # trimmed alignments (only if trimming is used)
 │   └── stats/                              # AMAS summary table and figures
-├── Etape_9_final_files/                    # UCE summary, nexus/phylip per locus, supermatrix
+├── Etape_9_final_files/                    # UCE summary, phylip per locus, supermatrix
 └── pipeline_info/                          # Nextflow report, timeline and trace
 ```
 Some folders are empty when the corresponding step is skipped.
